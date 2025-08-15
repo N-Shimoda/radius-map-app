@@ -1,0 +1,27 @@
+# Node.js dependencies
+node_modules/
+
+# Vite build output
+dist/
+
+# Local environment variables
+.env
+.env.local
+.env.*.local
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Editor / OS-specific files
+.DS_Store
+Thumbs.db
+
+# IDE settings (任意)
+.vscode/
+.idea/
+
+# Optional: TypeScript build cache
+*.tsbuildinfo
