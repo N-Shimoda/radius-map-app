@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { MapContainer, TileLayer, Marker, Popup, Circle, useMap } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
@@ -42,6 +42,7 @@ type Translation = {
   alreadySavedButton: string;
   savedLocationsTitle: string;
   downloadLocationsButton: string;
+  uploadLocationsButton: string;
   noSavedLocations: string;
   editLabelHeading: string;
   saveLabelButton: string;
@@ -97,7 +98,8 @@ const translations: Record<Language, Translation> = {
     saveCurrentButton: "Save this location",
     alreadySavedButton: "Location saved",
     savedLocationsTitle: "Saved Locations",
-    downloadLocationsButton: "Download saved locations",
+    downloadLocationsButton: "Download",
+    uploadLocationsButton: "Upload",
     noSavedLocations: "No locations saved yet.",
     editLabelHeading: "Edit label",
     saveLabelButton: "Save",
@@ -134,7 +136,8 @@ const translations: Record<Language, Translation> = {
     saveCurrentButton: "この地点を保存",
     alreadySavedButton: "保存済みの地点",
     savedLocationsTitle: "保存した地点",
-    downloadLocationsButton: "保存地点をダウンロード",
+    downloadLocationsButton: "ダウンロード",
+    uploadLocationsButton: "アップロード",
     noSavedLocations: "まだ保存された地点はありません。",
     editLabelHeading: "ラベルを編集",
     saveLabelButton: "保存",
@@ -207,6 +210,7 @@ export default function App() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [language, setLanguage] = useState<Language>("ja");
   const [isSearchLocked, setIsSearchLocked] = useState(false);
+  const uploadInputRef = useRef<HTMLInputElement | null>(null);
   const debSearch = useDebounced(search, 400);
   const t = translations[language];
   const languageOptions: Language[] = ["en", "ja"];
@@ -340,6 +344,46 @@ export default function App() {
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
+  };
+
+  const handleTriggerUpload = () => {
+    uploadInputRef.current?.click();
+  };
+
+  const handleUploadLocations: React.ChangeEventHandler<HTMLInputElement> = async (event) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+    try {
+      const text = await file.text();
+      const parsed = JSON.parse(text);
+      if (!Array.isArray(parsed)) throw new Error("Invalid format");
+      const normalized: SavedLocation[] = parsed
+        .map((item) => {
+          if (!item) return null;
+          const lat = Number((item as any).lat);
+          const lng = Number((item as any).lng);
+          if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+          const rawLabel = typeof (item as any).label === "string" ? (item as any).label : "";
+          const label = rawLabel.trim() || t.formatDefaultSavedLabel(lat, lng);
+          const id = typeof (item as any).id === "string" ? (item as any).id : generateId();
+          return { id, label, lat, lng };
+        })
+        .filter((entry): entry is SavedLocation => Boolean(entry));
+      if (normalized.length === 0) {
+        if (typeof window !== "undefined" && window.alert) {
+          window.alert("No valid locations found in the file.");
+        }
+        return;
+      }
+      setSavedLocations(normalized);
+      setSelectedLocationId(normalized[0].id);
+      setCenter({ lat: normalized[0].lat, lng: normalized[0].lng });
+    } catch (err) {
+      if (typeof window !== "undefined" && window.alert) {
+        window.alert("Failed to read locations file.");
+      }
+    }
   };
 
   const handleSelectSaved = (location: SavedLocation) => {
@@ -551,14 +595,30 @@ export default function App() {
             <div className="border border-slate-200 rounded-xl p-4 bg-white shadow-sm flex-1 min-h-[180px]">
               <div className="flex items-center justify-between gap-3 mb-2">
                 <div className="font-semibold text-slate-900">{t.savedLocationsTitle}</div>
-                <button
-                  type="button"
-                  onClick={handleDownloadLocations}
-                  disabled={savedLocations.length === 0}
-                  className="text-xs font-semibold px-3 py-1.5 rounded border border-slate-200 text-slate-600 hover:border-sky-400 hover:text-sky-700 disabled:text-slate-400 disabled:border-slate-200"
-                >
-                  {t.downloadLocationsButton}
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={handleDownloadLocations}
+                    disabled={savedLocations.length === 0}
+                    className="text-xs font-semibold px-3 py-1.5 rounded border border-slate-200 text-slate-600 hover:border-sky-400 hover:text-sky-700 disabled:text-slate-400 disabled:border-slate-200"
+                  >
+                    {t.downloadLocationsButton}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleTriggerUpload}
+                    className="text-xs font-semibold px-3 py-1.5 rounded border border-slate-200 text-slate-600 hover:border-sky-400 hover:text-sky-700"
+                  >
+                    {t.uploadLocationsButton}
+                  </button>
+                  <input
+                    ref={uploadInputRef}
+                    type="file"
+                    accept="application/json"
+                    className="hidden"
+                    onChange={handleUploadLocations}
+                  />
+                </div>
               </div>
               {savedLocations.length === 0 ? (
                 <div className="text-xs text-slate-500">{t.noSavedLocations}</div>
