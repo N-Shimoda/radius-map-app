@@ -364,7 +364,8 @@ export default function App() {
           const lat = Number((item as any).lat);
           const lng = Number((item as any).lng);
           if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
-          const rawLabel = typeof (item as any).label === "string" ? (item as any).label : "";
+          const labelValue = (item as any).label;
+          const rawLabel = typeof labelValue === "string" ? labelValue : "";
           const label = rawLabel.trim() || t.formatDefaultSavedLabel(lat, lng);
           const id = typeof (item as any).id === "string" ? (item as any).id : generateId();
           return { id, label, lat, lng };
