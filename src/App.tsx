@@ -367,7 +367,8 @@ export default function App() {
           const labelValue = (item as any).label;
           const rawLabel = typeof labelValue === "string" ? labelValue : "";
           const label = rawLabel.trim() || t.formatDefaultSavedLabel(lat, lng);
-          const id = typeof (item as any).id === "string" ? (item as any).id : generateId();
+          const itemId = (item as any).id;
+          const id = typeof itemId === "string" ? itemId : generateId();
           return { id, label, lat, lng };
         })
         .filter((entry): entry is SavedLocation => Boolean(entry));
