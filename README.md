@@ -1,41 +1,41 @@
-# 半径可視化マップ
+# Radius Visualization Map
 
-このアプリは、React + Leaflet を用いて任意の地点から指定半径の円を地図上に描画できる Web アプリです。郵便番号や施設名などの検索機能を備え、地図クリックによる中心点の変更、km/mile 単位の切り替えが可能です。
+This web app uses React and Leaflet to draw a circle with an arbitrary radius from any location on the map. It supports search by postal code or facility name, switching between kilometers and miles, and recentering by clicking on the map.
 
-## 主な機能
+## Features
 
-- **半径入力**: 数値を入力して描画する円の半径を変更可能（0.1 単位）。
-- **単位切替**: km と mile の間で切り替え。
-- **場所検索**: 郵便番号や施設名で検索し、候補から選択して地図を移動。
-- **地図クリック**: 任意の地点をクリックして中心点を移動。
-- **半径表示**: 入力値に応じて半径をメートル換算し、円として描画。
+- **Radius input**: Enter a number (0.1 increments) to change the radius of the circle.
+- **Unit toggle**: Switch between kilometers and miles.
+- **Place search**: Search by postal code or facility name and jump to a suggested result.
+- **Map click**: Click anywhere on the map to move the center point.
+- **Radius display**: Shows the converted radius in meters and renders it as a circle.
 
-## 使い方
+## Usage
 
-1. 半径入力欄に数値を入力します（例: 5）。
-2. 単位を km または mile から選択します。
-3. 「場所検索」に郵便番号や施設名を入力し、候補リストから選択します。
-4. 地図をクリックすると、その地点が新しい中心点になります。
-5. 円の範囲が地図上に描画されます。
+1. Enter a value in the radius field (e.g., 5).
+2. Choose either km or mi as the unit.
+3. Enter a postal code or facility name in the search box and pick a suggestion.
+4. Click on the map to move the center point.
+5. The circle will update to show the selected radius on the map.
 
-## 開発環境での実行
+## Local Development
 
-1. リポジトリをクローン:
+1. Clone the repository:
    ```bash
-   git clone <このリポジトリのURL>
-   cd <フォルダ名>
+   git clone <repository-url>
+   cd <folder-name>
    ```
-2. 依存パッケージをインストール:
+2. Install dependencies:
    ```bash
    npm install
    ```
-3. 開発サーバーを起動:
+3. Start the development server:
    ```bash
    npm run dev
    ```
-4. 表示された URL（例: http://localhost:5173）をブラウザで開きます。
+4. Open the displayed URL (e.g., http://localhost:5173) in your browser.
 
-## 技術スタック
+## Tech Stack
 
 - React 18
 - TypeScript
@@ -44,10 +44,10 @@
 - Leaflet / React-Leaflet
 - Nominatim API (OpenStreetMap)
 
-## 注意事項
+## Notes
 
-- 検索機能は Nominatim API を利用しています。高頻度利用や商用利用時は利用規約をご確認ください。
-- API レスポンスの安定性に依存するため、ネットワーク環境や API の混雑状況により検索が失敗する場合があります。
+- Place search uses the Nominatim API. Review its usage policy for high-frequency or commercial use.
+- Search reliability depends on the API response. Requests may fail when the network or API is congested.
 
 ---
 

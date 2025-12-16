@@ -20,7 +20,7 @@ type GeocodeResult = {
 };
 type SavedLocation = LatLng & { id: string; label: string };
 
-const DEFAULT_CENTER: LatLng = { lat: 35.681236, lng: 139.767125 }; // 東京駅
+const DEFAULT_CENTER: LatLng = { lat: 35.681236, lng: 139.767125 }; // Tokyo Station
 const SAVED_LOCATIONS_KEY = "radius-map-app:saved-locations";
 const generateId = () =>
   typeof crypto !== "undefined" && "randomUUID" in crypto
@@ -35,13 +35,13 @@ function RecenterOn({ center }: { center: LatLng }) {
   return null;
 }
 
-// ★ 追加: コンテナサイズ変化時に再レイアウト（地図範囲が広がらない対策）
+// Added: re-layout when the container size changes so map bounds stay correct
 function InvalidateSizeOnResize() {
   const map = useMap();
   useEffect(() => {
     const invalidate = () => map.invalidateSize();
     map.whenReady(() => {
-      // 初期レイアウト確定後に再計算
+      // Recalculate right after the initial layout settles
       requestAnimationFrame(invalidate);
       setTimeout(invalidate, 0);
     });
@@ -224,7 +224,7 @@ export default function App() {
   );
 
   return (
-    // 画面全高 + 縦方向レイアウト
+    // Ensure full-height layout with vertical stacking
     <div className="min-h-screen h-screen bg-slate-50 text-slate-900 flex flex-col">
       <header className="sticky top-0 z-[1000] bg-white/80 backdrop-blur border-b border-slate-200">
         <div className="w-full px-6 py-3 flex items-center gap-3">
@@ -468,7 +468,7 @@ export default function App() {
               attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
               url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
             />
-            {/* ★ 追加: サイズ再計算 */}
+            {/* Added: force size recalculation */}
             <InvalidateSizeOnResize />
             <RecenterOn center={center} />
             <ClickSetter />
