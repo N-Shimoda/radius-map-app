@@ -181,6 +181,7 @@ export default function App() {
   const [editingLabel, setEditingLabel] = useState("");
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [language, setLanguage] = useState<Language>("ja");
+  const [isSearchLocked, setIsSearchLocked] = useState(false);
   const debSearch = useDebounced(search, 400);
   const t = translations[language];
   const languageOptions: Language[] = ["en", "ja"];
@@ -193,6 +194,11 @@ export default function App() {
 
   // Live search with Nominatim (OpenStreetMap)
   useEffect(() => {
+    if (isSearchLocked) {
+      setResults([]);
+      setIsSearching(false);
+      return;
+    }
     const q = debSearch.trim();
     if (!q) {
       setResults([]);
@@ -221,7 +227,7 @@ export default function App() {
     return () => {
       canceled = true;
     };
-  }, [debSearch, language]);
+  }, [debSearch, language, isSearchLocked]);
 
   // Click on map to set center
   function ClickSetter() {
@@ -241,6 +247,7 @@ export default function App() {
   const handleSelectPlace = (g: GeocodeResult) => {
     setCenter({ lat: parseFloat(g.lat), lng: parseFloat(g.lon) });
     setSearch(g.display_name);
+    setIsSearchLocked(false);
     setResults([]);
   };
 
@@ -290,7 +297,10 @@ export default function App() {
   const handleSelectSaved = (location: SavedLocation) => {
     setCenter({ lat: location.lat, lng: location.lng });
     setSearch(location.label);
+    setIsSearchLocked(true);
     setSelectedLocationId(location.id);
+    setResults([]);
+    setIsSearching(false);
   };
 
   const handleStartEditing = (location: SavedLocation) => {
@@ -431,7 +441,10 @@ export default function App() {
                 <div className="relative mt-1">
                   <input
                     value={search}
-                    onChange={(e) => setSearch(e.target.value)}
+                    onChange={(e) => {
+                      setSearch(e.target.value);
+                      setIsSearchLocked(false);
+                    }}
                     onKeyDown={(e) => {
                       if (e.key === "Enter" && results[0]) handleSelectPlace(results[0]);
                     }}
