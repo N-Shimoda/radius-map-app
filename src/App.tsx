@@ -41,6 +41,7 @@ type Translation = {
   saveCurrentButton: string;
   alreadySavedButton: string;
   savedLocationsTitle: string;
+  downloadLocationsButton: string;
   noSavedLocations: string;
   editLabelHeading: string;
   saveLabelButton: string;
@@ -96,6 +97,7 @@ const translations: Record<Language, Translation> = {
     saveCurrentButton: "Save this location",
     alreadySavedButton: "Location saved",
     savedLocationsTitle: "Saved Locations",
+    downloadLocationsButton: "Download saved locations",
     noSavedLocations: "No locations saved yet.",
     editLabelHeading: "Edit label",
     saveLabelButton: "Save",
@@ -132,6 +134,7 @@ const translations: Record<Language, Translation> = {
     saveCurrentButton: "この地点を保存",
     alreadySavedButton: "保存済みの地点",
     savedLocationsTitle: "保存した地点",
+    downloadLocationsButton: "保存地点をダウンロード",
     noSavedLocations: "まだ保存された地点はありません。",
     editLabelHeading: "ラベルを編集",
     saveLabelButton: "保存",
@@ -314,6 +317,29 @@ export default function App() {
       ...prev,
       { id: generateId(), label, lat: center.lat, lng: center.lng },
     ]);
+  };
+
+  const handleDownloadLocations = () => {
+    if (savedLocations.length === 0 || typeof window === "undefined") return;
+    const payload = JSON.stringify(
+      savedLocations.map(({ id, label, lat, lng }) => ({ id, label, lat, lng })),
+      null,
+      2,
+    );
+    const blob = new Blob([payload], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    const now = new Date();
+    const y = now.getFullYear();
+    const m = String(now.getMonth() + 1).padStart(2, "0");
+    const d = String(now.getDate()).padStart(2, "0");
+    const dateStamp = `${y}${m}${d}`;
+    link.href = url;
+    link.download = `locations-${dateStamp}.json`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
   };
 
   const handleSelectSaved = (location: SavedLocation) => {
@@ -523,7 +549,17 @@ export default function App() {
               </button>
             </div>
             <div className="border border-slate-200 rounded-xl p-4 bg-white shadow-sm flex-1 min-h-[180px]">
-              <div className="font-semibold text-slate-900 mb-2">{t.savedLocationsTitle}</div>
+              <div className="flex items-center justify-between gap-3 mb-2">
+                <div className="font-semibold text-slate-900">{t.savedLocationsTitle}</div>
+                <button
+                  type="button"
+                  onClick={handleDownloadLocations}
+                  disabled={savedLocations.length === 0}
+                  className="text-xs font-semibold px-3 py-1.5 rounded border border-slate-200 text-slate-600 hover:border-sky-400 hover:text-sky-700 disabled:text-slate-400 disabled:border-slate-200"
+                >
+                  {t.downloadLocationsButton}
+                </button>
+              </div>
               {savedLocations.length === 0 ? (
                 <div className="text-xs text-slate-500">{t.noSavedLocations}</div>
               ) : (
