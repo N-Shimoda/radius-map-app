@@ -23,10 +23,10 @@ type Language = "en" | "ja";
 
 // Interface for uploaded JSON location items
 interface UploadedLocationItem {
-  id?: unknown;
-  label?: unknown;
-  lat?: unknown;
-  lng?: unknown;
+  id?: string | number | null;
+  label?: string | number | null;
+  lat: string | number;
+  lng: string | number;
 }
 
 // Type guard to validate uploaded location data
