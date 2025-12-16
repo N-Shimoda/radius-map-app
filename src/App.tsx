@@ -365,8 +365,9 @@ export default function App() {
   );
 
   return (
-    // Ensure full-height layout with vertical stacking
-    <div className="min-h-screen h-screen bg-slate-50 text-slate-900 flex flex-col">
+    <>
+      {/* Ensure full-height layout for header + main, footer sits outside */}
+      <div className="min-h-screen h-screen bg-slate-50 text-slate-900 flex flex-col">
       <header className="sticky top-0 z-[1000] bg-white/80 backdrop-blur border-b border-slate-200">
         <div className="w-full px-6 py-3 flex items-center gap-3 justify-between">
           <div className="flex items-center gap-3">
@@ -664,7 +665,10 @@ export default function App() {
         </div>
       </main>
 
-      <footer className="w-full p-4 text-xs text-slate-500">{t.footerNote}</footer>
-    </div>
+      </div>
+      <footer className="w-full p-4 text-xs text-slate-500 bg-slate-50 border-t border-slate-200">
+        {t.footerNote}
+      </footer>
+    </>
   );
 }
