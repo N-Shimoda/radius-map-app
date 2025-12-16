@@ -68,6 +68,9 @@ export default function App() {
   const [results, setResults] = useState<GeocodeResult[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [savedLocations, setSavedLocations] = useState<SavedLocation[]>([]);
+  const [selectedLocationId, setSelectedLocationId] = useState<string | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingLabel, setEditingLabel] = useState("");
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const debSearch = useDebounced(search, 400);
 
@@ -178,6 +181,38 @@ export default function App() {
   const handleSelectSaved = (location: SavedLocation) => {
     setCenter({ lat: location.lat, lng: location.lng });
     setSearch(location.label);
+    setSelectedLocationId(location.id);
+  };
+
+  const handleStartEditing = (location: SavedLocation) => {
+    setSelectedLocationId(location.id);
+    setEditingId(location.id);
+    setEditingLabel(location.label);
+  };
+
+  const handleDeleteLocation = (id: string) => {
+    setSavedLocations((prev) => prev.filter((loc) => loc.id !== id));
+    if (selectedLocationId === id) setSelectedLocationId(null);
+    if (editingId === id) {
+      setEditingId(null);
+      setEditingLabel("");
+    }
+  };
+
+  const handleCancelEditing = () => {
+    setEditingId(null);
+    setEditingLabel("");
+  };
+
+  const handleCommitEditing = () => {
+    if (!editingId) return;
+    const trimmed = editingLabel.trim();
+    if (!trimmed) return;
+    setSavedLocations((prev) =>
+      prev.map((loc) => (loc.id === editingId ? { ...loc, label: trimmed } : loc)),
+    );
+    setEditingId(null);
+    setEditingLabel("");
   };
 
   const isCurrentLocationSaved = savedLocations.some(
@@ -319,17 +354,107 @@ export default function App() {
                 <div className="text-xs text-slate-500">まだ保存された地点はありません。</div>
               ) : (
                 <ul className="space-y-2 max-h-80 overflow-auto pr-1">
-                  {savedLocations.map((location) => (
-                    <li key={location.id}>
-                      <button
-                        onClick={() => handleSelectSaved(location)}
-                        className="w-full text-left border border-slate-200 rounded-lg px-3 py-2 hover:border-sky-400 hover:text-sky-600 transition text-xs"
-                      >
-                        <div className="font-medium">{location.label}</div>
-                        <div className="font-mono text-slate-500">{location.lat.toFixed(4)}, {location.lng.toFixed(4)}</div>
-                      </button>
-                    </li>
-                  ))}
+                  {savedLocations.map((location) => {
+                    const isEditing = editingId === location.id;
+                    return (
+                      <li key={location.id} className="text-xs">
+                        {isEditing ? (
+                          <div className="border border-sky-400 rounded-lg px-3 py-2 bg-sky-50">
+                            <label className="block text-[10px] text-slate-500 mb-1">ラベルを編集</label>
+                            <input
+                              value={editingLabel}
+                              onChange={(e) => setEditingLabel(e.target.value)}
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter" && editingLabel.trim()) handleCommitEditing();
+                                if (e.key === "Escape") handleCancelEditing();
+                              }}
+                              autoFocus
+                              className="w-full rounded border border-slate-300 px-2 py-1 text-xs focus:outline-none focus:ring-2 focus:ring-sky-400"
+                            />
+                            <div className="flex gap-2 mt-2">
+                              <button
+                                type="button"
+                                onClick={handleCommitEditing}
+                                disabled={!editingLabel.trim()}
+                                className="flex-1 rounded bg-sky-600 text-white py-1 font-semibold disabled:bg-slate-300"
+                              >
+                                保存
+                              </button>
+                              <button
+                                type="button"
+                                onClick={handleCancelEditing}
+                                className="flex-1 rounded border border-slate-200 text-slate-600 py-1"
+                              >
+                                キャンセル
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          <div
+                            role="button"
+                            tabIndex={0}
+                            onClick={() => handleSelectSaved(location)}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter" || e.key === " ") {
+                                e.preventDefault();
+                                handleSelectSaved(location);
+                              }
+                            }}
+                            className={`w-full border rounded-lg px-3 py-2 transition ${
+                              selectedLocationId === location.id
+                                ? "border-sky-500 text-sky-700 shadow-inner"
+                                : "border-slate-200 hover:border-sky-400 hover:text-sky-600"
+                            }`}
+                          >
+                            <div className="font-medium">{location.label}</div>
+                            <div className="font-mono text-slate-500">
+                              {location.lat.toFixed(4)}, {location.lng.toFixed(4)}
+                            </div>
+                            {selectedLocationId === location.id && (
+                              <div className="mt-2 flex gap-2">
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleStartEditing(location);
+                                  }}
+                                  className="flex-1 rounded border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-600 hover:border-sky-400 hover:text-sky-700"
+                                >
+                                  ラベルを編集
+                                </button>
+                                <button
+                                  type="button"
+                                  aria-label={`${location.label} を削除`}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleDeleteLocation(location.id);
+                                  }}
+                                  className="flex-1 flex items-center justify-center gap-1 rounded border border-rose-200 px-3 py-1.5 text-xs font-semibold text-rose-600 hover:border-rose-400 hover:text-rose-700"
+                                >
+                                  <svg
+                                    className="h-4 w-4"
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    strokeWidth="2"
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    aria-hidden="true"
+                                  >
+                                    <polyline points="3 6 5 6 21 6" />
+                                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6" />
+                                    <path d="M10 11v6" />
+                                    <path d="M14 11v6" />
+                                    <path d="M15 6V4a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v2" />
+                                  </svg>
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </li>
+                    );
+                  })}
                 </ul>
               )}
             </div>
