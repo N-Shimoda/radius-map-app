@@ -241,18 +241,9 @@ export default function App() {
               strokeLinejoin="round"
               aria-hidden="true"
             >
-              {isSidebarOpen ? (
-                <>
-                  <line x1="4" y1="12" x2="20" y2="12" />
-                  <polyline points="10 18 4 12 10 6" />
-                </>
-              ) : (
-                <>
-                  <line x1="4" y1="6" x2="20" y2="6" />
-                  <line x1="4" y1="12" x2="20" y2="12" />
-                  <line x1="4" y1="18" x2="20" y2="18" />
-                </>
-              )}
+              <line x1="4" y1="6" x2="20" y2="6" />
+              <line x1="4" y1="12" x2="20" y2="12" />
+              <line x1="4" y1="18" x2="20" y2="18" />
             </svg>
           </button>
           <div>
