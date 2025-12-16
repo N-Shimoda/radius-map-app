@@ -45,6 +45,7 @@ type Translation = {
   toggleSidebarShow: string;
   toggleSidebarHide: string;
   radiusLabel: string;
+  radiusInvalidMessage: string;
   unitLabel: string;
   unitKmOption: string;
   unitMiOption: string;
@@ -102,6 +103,7 @@ const translations: Record<Language, Translation> = {
     toggleSidebarShow: "Show sidebar",
     toggleSidebarHide: "Hide sidebar",
     radiusLabel: "Radius",
+    radiusInvalidMessage: "Radius must contain digits only.",
     unitLabel: "Unit",
     unitKmOption: "km",
     unitMiOption: "mile",
@@ -140,6 +142,7 @@ const translations: Record<Language, Translation> = {
     toggleSidebarShow: "サイドバーを表示",
     toggleSidebarHide: "サイドバーを隠す",
     radiusLabel: "半径",
+    radiusInvalidMessage: "半径は数字のみで入力してください。",
     unitLabel: "単位",
     unitKmOption: "km",
     unitMiOption: "mile",
@@ -229,9 +232,11 @@ export default function App() {
   const [language, setLanguage] = useState<Language>("ja");
   const [isSearchLocked, setIsSearchLocked] = useState(false);
   const uploadInputRef = useRef<HTMLInputElement | null>(null);
+  const [radiusWarning, setRadiusWarning] = useState<string | null>(null);
   const debSearch = useDebounced(search, 400);
   const t = translations[language];
   const languageOptions: Language[] = ["en", "ja"];
+  const radiusPattern = /^\d*(\.\d*)?$/;
 
   const radiusMeters = useMemo(() => {
     const r = Number(radiusInput);
@@ -339,6 +344,15 @@ export default function App() {
       ...prev,
       { id: generateId(), label, lat: center.lat, lng: center.lng },
     ]);
+  };
+
+  const handleRadiusInputChange = (next: string) => {
+    if (next === "" || radiusPattern.test(next)) {
+      setRadiusWarning(null);
+      setRadiusInput(next);
+      return;
+    }
+    setRadiusWarning(t.radiusInvalidMessage);
   };
 
   const handleDownloadLocations = () => {
@@ -455,14 +469,14 @@ export default function App() {
   return (
     <>
       {/* Ensure full-height layout for header + main, footer sits outside */}
-      <div className="min-h-screen h-screen bg-slate-50 text-slate-900 flex flex-col">
-      <header className="sticky top-0 z-[1000] bg-white/80 backdrop-blur border-b border-slate-200">
+      <div className="min-h-screen h-screen bg-slate-50 text-slate-900 dark:bg-slate-900 dark:text-slate-100 flex flex-col">
+      <header className="sticky top-0 z-[1000] bg-white/80 dark:bg-slate-900/70 backdrop-blur border-b border-slate-200 dark:border-slate-800">
         <div className="w-full px-6 py-3 flex items-center gap-3 justify-between">
           <div className="flex items-center gap-3">
             <button
               type="button"
               onClick={() => setIsSidebarOpen((prev) => !prev)}
-              className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-slate-300 bg-white text-slate-600 hover:border-slate-400"
+              className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-slate-300 bg-white text-slate-600 hover:border-slate-400 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-200 dark:hover:border-slate-500"
               aria-pressed={isSidebarOpen}
               aria-label={isSidebarOpen ? t.toggleSidebarHide : t.toggleSidebarShow}
             >
@@ -483,12 +497,12 @@ export default function App() {
             </button>
             <div>
               <h1 className="text-2xl font-semibold">{t.headerTitle}</h1>
-              <p className="text-sm text-slate-600">{t.headerDescription}</p>
+              <p className="text-sm text-slate-600 dark:text-slate-300">{t.headerDescription}</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
             <div
-              className="inline-flex rounded-full border border-slate-300 bg-white shadow-sm overflow-hidden"
+              className="inline-flex rounded-full border border-slate-300 bg-white shadow-sm overflow-hidden dark:border-slate-700 dark:bg-slate-800"
               role="group"
               aria-label={t.languageButtonLabel}
             >
@@ -502,7 +516,7 @@ export default function App() {
                     className={`px-4 py-1.5 text-sm font-semibold transition ${
                       isActive
                         ? "bg-sky-600 text-white"
-                        : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
+                        : "text-slate-600 hover:text-slate-900 hover:bg-slate-100 dark:text-slate-300 dark:hover:text-white dark:hover:bg-slate-700"
                     } ${index === 0 ? "rounded-l-full" : ""} ${
                       index === languageOptions.length - 1 ? "rounded-r-full" : ""
                     }`}
@@ -521,24 +535,28 @@ export default function App() {
       <main className="flex-1 w-full px-6 py-4 pb-4 flex flex-col gap-4 md:flex-row">
         {/* sidebar */}
         {isSidebarOpen && (
-          <aside className="text-sm text-slate-700 shrink-0 md:w-72 lg:w-80 space-y-4 order-2 md:order-1">
-            <div className="border border-slate-200 rounded-xl p-4 bg-white shadow-sm space-y-4">
+          <aside className="text-sm text-slate-700 dark:text-slate-200 shrink-0 md:w-72 lg:w-80 space-y-4 order-2 md:order-1">
+            <div className="border border-slate-200 dark:border-slate-700 rounded-xl p-4 bg-white dark:bg-slate-800 shadow-sm space-y-4">
               <div className="flex gap-3">
                 <div className="flex flex-col gap-2 flex-1">
-                  <label className="text-xs text-slate-600">{t.radiusLabel}</label>
+                  <label className="text-xs text-slate-600 dark:text-slate-300">{t.radiusLabel}</label>
                   <input
                     type="number"
                     step="0.1"
                     min={0}
                     value={radiusInput}
-                    onChange={(e) => setRadiusInput(e.target.value)}
-                    className="h-10 rounded-xl border border-slate-300 px-3 focus:outline-none focus:ring-2 focus:ring-sky-400"
+                    onChange={(e) => handleRadiusInputChange(e.target.value)}
+                    className={`h-10 rounded-xl border px-3 bg-white text-slate-900 dark:bg-slate-900/50 dark:text-slate-100 focus:outline-none focus:ring-2 ${
+                      radiusWarning
+                        ? "border-rose-400 focus:ring-rose-300"
+                        : "border-slate-300 focus:ring-sky-400 dark:border-slate-600"
+                    }`}
                   />
                 </div>
                 <div className="flex flex-col gap-2 flex-1">
-                  <label className="text-xs text-slate-600">{t.unitLabel}</label>
+                  <label className="text-xs text-slate-600 dark:text-slate-300">{t.unitLabel}</label>
                   <select
-                    className="h-10 rounded-xl border border-slate-300 px-3 bg-white"
+                    className="h-10 rounded-xl border border-slate-300 dark:border-slate-600 px-3 bg-white dark:bg-slate-900/50 dark:text-slate-100"
                     value={unit}
                     onChange={(e) => setUnit(e.target.value as any)}
                   >
@@ -548,7 +566,7 @@ export default function App() {
                 </div>
               </div>
               <div>
-                <label className="text-xs text-slate-600">{t.searchLabel}</label>
+                <label className="text-xs text-slate-600 dark:text-slate-300">{t.searchLabel}</label>
                 <div className="relative mt-1">
                   <input
                     value={search}
@@ -560,9 +578,9 @@ export default function App() {
                       if (e.key === "Enter" && results[0]) handleSelectPlace(results[0]);
                     }}
                     placeholder={t.searchPlaceholder}
-                    className="h-10 w-full rounded-xl border border-slate-300 px-3 pr-10 focus:outline-none focus:ring-2 focus:ring-sky-400"
+                    className="h-10 w-full rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900/50 text-slate-900 dark:text-slate-100 px-3 pr-10 focus:outline-none focus:ring-2 focus:ring-sky-400"
                   />
-                  <div className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-slate-500">
+                  <div className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-slate-500 dark:text-slate-300">
                     {isSearching
                       ? t.searchStatusSearching
                       : results.length
@@ -570,15 +588,15 @@ export default function App() {
                         : ""}
                   </div>
                   {results.length > 0 && (
-                    <div className="absolute z-[1100] mt-1 w-full rounded-xl border border-slate-200 bg-white shadow">
+                    <div className="absolute z-[1100] mt-1 w-full rounded-xl border border-slate-200 bg-white shadow dark:border-slate-700 dark:bg-slate-800">
                       {results.map((g, i) => (
                         <button
                           key={i}
                           onClick={() => handleSelectPlace(g)}
-                          className="block w-full text-left px-3 py-2 hover:bg-slate-50"
+                          className="block w-full text-left px-3 py-2 hover:bg-slate-50 dark:hover:bg-slate-700"
                         >
                           <div className="text-sm line-clamp-1" title={g.display_name}>{g.display_name}</div>
-                          <div className="text-xs text-slate-500">{g.type}</div>
+                          <div className="text-xs text-slate-500 dark:text-slate-400">{g.type}</div>
                         </button>
                       ))}
                     </div>
@@ -587,45 +605,45 @@ export default function App() {
               </div>
             </div>
 
-            <div className="border border-slate-200 rounded-xl p-4 bg-white shadow-sm">
-              <div className="font-semibold text-slate-900 mb-2">{t.currentLocationTitle}</div>
+            <div className="border border-slate-200 dark:border-slate-700 rounded-xl p-4 bg-white dark:bg-slate-800 shadow-sm">
+              <div className="font-semibold text-slate-900 dark:text-slate-100 mb-2">{t.currentLocationTitle}</div>
               <dl className="text-xs space-y-2">
                 <div>
-                  <dt className="text-slate-500">{t.radiusTerm}</dt>
+                  <dt className="text-slate-500 dark:text-slate-300">{t.radiusTerm}</dt>
                   <dd className="font-mono text-base">{metersToReadable(radiusMeters)}</dd>
                 </div>
                 <div>
-                  <dt className="text-slate-500">{t.centerCoordinatesTerm}</dt>
+                  <dt className="text-slate-500 dark:text-slate-300">{t.centerCoordinatesTerm}</dt>
                   <dd className="font-mono text-base">
                     {center.lat.toFixed(5)}, {center.lng.toFixed(5)}
                   </dd>
                 </div>
               </dl>
-              <p className="text-xs text-slate-500 mt-3">{t.mapClickHint}</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-3">{t.mapClickHint}</p>
               <button
                 onClick={handleSaveLocation}
                 disabled={isCurrentLocationSaved}
-                className="mt-4 w-full rounded-lg bg-sky-600 text-white px-4 py-2 text-sm font-semibold disabled:bg-slate-300"
+                className="mt-4 w-full rounded-lg bg-sky-600 text-white px-4 py-2 text-sm font-semibold disabled:bg-slate-300 dark:disabled:bg-slate-600"
               >
                 {isCurrentLocationSaved ? t.alreadySavedButton : t.saveCurrentButton}
               </button>
             </div>
-            <div className="border border-slate-200 rounded-xl p-4 bg-white shadow-sm flex-1 min-h-[180px]">
+            <div className="border border-slate-200 dark:border-slate-700 rounded-xl p-4 bg-white dark:bg-slate-800 shadow-sm flex-1 min-h-[180px]">
               <div className="flex items-center justify-between gap-3 mb-2">
-                <div className="font-semibold text-slate-900">{t.savedLocationsTitle}</div>
+                <div className="font-semibold text-slate-900 dark:text-slate-100">{t.savedLocationsTitle}</div>
                 <div className="flex items-center gap-2">
                   <button
                     type="button"
                     onClick={handleDownloadLocations}
                     disabled={savedLocations.length === 0}
-                    className="text-xs font-semibold px-3 py-1.5 rounded border border-slate-200 text-slate-600 hover:border-sky-400 hover:text-sky-700 disabled:text-slate-400 disabled:border-slate-200"
+                    className="text-xs font-semibold px-3 py-1.5 rounded border border-slate-200 text-slate-600 hover:border-sky-400 hover:text-sky-700 disabled:text-slate-400 disabled:border-slate-200 dark:border-slate-600 dark:text-slate-200 dark:hover:border-sky-500 dark:hover:text-sky-300 dark:disabled:text-slate-500"
                   >
                     {t.downloadLocationsButton}
                   </button>
                   <button
                     type="button"
                     onClick={handleTriggerUpload}
-                    className="text-xs font-semibold px-3 py-1.5 rounded border border-slate-200 text-slate-600 hover:border-sky-400 hover:text-sky-700"
+                    className="text-xs font-semibold px-3 py-1.5 rounded border border-slate-200 text-slate-600 hover:border-sky-400 hover:text-sky-700 dark:border-slate-600 dark:text-slate-200 dark:hover:border-sky-500 dark:hover:text-sky-300"
                   >
                     {t.uploadLocationsButton}
                   </button>
@@ -639,7 +657,7 @@ export default function App() {
                 </div>
               </div>
               {savedLocations.length === 0 ? (
-                <div className="text-xs text-slate-500">{t.noSavedLocations}</div>
+                <div className="text-xs text-slate-500 dark:text-slate-400">{t.noSavedLocations}</div>
               ) : (
                 <ul className="space-y-2 max-h-80 overflow-auto pr-1">
                   {savedLocations.map((location) => {
@@ -647,8 +665,8 @@ export default function App() {
                     return (
                       <li key={location.id} className="text-xs">
                         {isEditing ? (
-                          <div className="border border-sky-400 rounded-lg px-3 py-2 bg-sky-50">
-                            <label className="block text-[10px] text-slate-500 mb-1">{t.editLabelHeading}</label>
+                          <div className="border border-sky-400 dark:border-sky-500 rounded-lg px-3 py-2 bg-sky-50 dark:bg-slate-900/40">
+                            <label className="block text-[10px] text-slate-500 dark:text-slate-400 mb-1">{t.editLabelHeading}</label>
                             <input
                               value={editingLabel}
                               onChange={(e) => setEditingLabel(e.target.value)}
@@ -657,7 +675,7 @@ export default function App() {
                                 if (e.key === "Escape") handleCancelEditing();
                               }}
                               autoFocus
-                              className="w-full rounded border border-slate-300 px-2 py-1 text-xs focus:outline-none focus:ring-2 focus:ring-sky-400"
+                              className="w-full rounded border border-slate-300 dark:border-slate-600 px-2 py-1 text-xs bg-white dark:bg-slate-900/50 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-400"
                             />
                             <div className="flex gap-2 mt-2">
                               <button
@@ -671,7 +689,7 @@ export default function App() {
                               <button
                                 type="button"
                                 onClick={handleCancelEditing}
-                                className="flex-1 rounded border border-slate-200 text-slate-600 py-1"
+                                className="flex-1 rounded border border-slate-200 text-slate-600 py-1 dark:border-slate-600 dark:text-slate-200"
                               >
                                 {t.cancelButton}
                               </button>
@@ -690,12 +708,12 @@ export default function App() {
                             }}
                             className={`w-full border rounded-lg px-3 py-2 transition ${
                               selectedLocationId === location.id
-                                ? "border-sky-500 text-sky-700 shadow-inner"
-                                : "border-slate-200 hover:border-sky-400 hover:text-sky-600"
+                                ? "border-sky-500 text-sky-700 shadow-inner dark:border-sky-400 dark:text-sky-300"
+                                : "border-slate-200 hover:border-sky-400 hover:text-sky-600 dark:border-slate-600 dark:hover:border-sky-500 dark:hover:text-sky-300"
                             }`}
                           >
                             <div className="font-medium">{location.label}</div>
-                            <div className="font-mono text-slate-500">
+                            <div className="font-mono text-slate-500 dark:text-slate-300">
                               {location.lat.toFixed(4)}, {location.lng.toFixed(4)}
                             </div>
                             {selectedLocationId === location.id && (
@@ -706,7 +724,7 @@ export default function App() {
                                     e.stopPropagation();
                                     handleStartEditing(location);
                                   }}
-                                  className="flex-1 rounded border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-600 hover:border-sky-400 hover:text-sky-700"
+                                  className="flex-1 rounded border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-600 hover:border-sky-400 hover:text-sky-700 dark:border-slate-600 dark:text-slate-200 dark:hover:border-sky-500 dark:hover:text-sky-300"
                                 >
                                   {t.editLabelButton}
                                 </button>
@@ -750,7 +768,7 @@ export default function App() {
         )}
 
         {/* map area */}
-        <div className="rounded-lg overflow-hidden border border-slate-200 flex-1 min-h-[320px] order-1 md:order-2">
+        <div className="rounded-lg overflow-hidden border border-slate-200 dark:border-slate-700 flex-1 min-h-[320px] order-1 md:order-2 bg-slate-100 dark:bg-slate-800">
           <MapContainer
             center={[center.lat, center.lng]}
             zoom={13}
@@ -780,7 +798,7 @@ export default function App() {
       </main>
 
       </div>
-      <footer className="w-full p-4 text-xs text-slate-500 bg-slate-50 border-t border-slate-200">
+      <footer className="w-full p-4 text-xs text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800">
         {t.footerNote}
       </footer>
     </>
