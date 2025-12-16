@@ -537,34 +537,6 @@ export default function App() {
         {isSidebarOpen && (
           <aside className="text-sm text-slate-700 dark:text-slate-200 shrink-0 md:w-72 lg:w-80 space-y-4 order-2 md:order-1">
             <div className="border border-slate-200 dark:border-slate-700 rounded-xl p-4 bg-white dark:bg-slate-800 shadow-sm space-y-4">
-              <div className="flex gap-3">
-                <div className="flex flex-col gap-2 flex-1">
-                  <label className="text-xs text-slate-600 dark:text-slate-300">{t.radiusLabel}</label>
-                  <input
-                    type="number"
-                    step="0.1"
-                    min={0}
-                    value={radiusInput}
-                    onChange={(e) => handleRadiusInputChange(e.target.value)}
-                    className={`h-10 rounded-xl border px-3 bg-white text-slate-900 dark:bg-slate-900/50 dark:text-slate-100 focus:outline-none focus:ring-2 ${
-                      radiusWarning
-                        ? "border-rose-400 focus:ring-rose-300"
-                        : "border-slate-300 focus:ring-sky-400 dark:border-slate-600"
-                    }`}
-                  />
-                </div>
-                <div className="flex flex-col gap-2 flex-1">
-                  <label className="text-xs text-slate-600 dark:text-slate-300">{t.unitLabel}</label>
-                  <select
-                    className="h-10 rounded-xl border border-slate-300 dark:border-slate-600 px-3 bg-white dark:bg-slate-900/50 dark:text-slate-100"
-                    value={unit}
-                    onChange={(e) => setUnit(e.target.value as any)}
-                  >
-                    <option value="km">{t.unitKmOption}</option>
-                    <option value="mi">{t.unitMiOption}</option>
-                  </select>
-                </div>
-              </div>
               <div>
                 <label className="text-xs text-slate-600 dark:text-slate-300">{t.searchLabel}</label>
                 <div className="relative mt-1">
@@ -601,6 +573,34 @@ export default function App() {
                       ))}
                     </div>
                   )}
+                </div>
+              </div>
+              <div className="flex gap-3">
+                <div className="flex flex-col gap-2 flex-1">
+                  <label className="text-xs text-slate-600 dark:text-slate-300">{t.radiusLabel}</label>
+                  <input
+                    type="number"
+                    step="0.1"
+                    min={0}
+                    value={radiusInput}
+                    onChange={(e) => handleRadiusInputChange(e.target.value)}
+                    className={`h-10 rounded-xl border px-3 bg-white text-slate-900 dark:bg-slate-900/50 dark:text-slate-100 focus:outline-none focus:ring-2 ${
+                      radiusWarning
+                        ? "border-rose-400 focus:ring-rose-300"
+                        : "border-slate-300 focus:ring-sky-400 dark:border-slate-600"
+                    }`}
+                  />
+                </div>
+                <div className="flex flex-col gap-2 flex-1">
+                  <label className="text-xs text-slate-600 dark:text-slate-300">{t.unitLabel}</label>
+                  <select
+                    className="h-10 rounded-xl border border-slate-300 dark:border-slate-600 px-3 bg-white dark:bg-slate-900/50 dark:text-slate-100"
+                    value={unit}
+                    onChange={(e) => setUnit(e.target.value as any)}
+                  >
+                    <option value="km">{t.unitKmOption}</option>
+                    <option value="mi">{t.unitMiOption}</option>
+                  </select>
                 </div>
               </div>
             </div>
