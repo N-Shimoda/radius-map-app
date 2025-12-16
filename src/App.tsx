@@ -48,7 +48,7 @@ type Translation = {
   editLabelButton: string;
   deleteSavedLabel: (label: string) => string;
   mapPopupTitle: string;
-  footerNote: string;
+  footerNote: React.ReactNode;
   confirmDelete: string;
   formatDefaultSavedLabel: (lat: number, lng: number) => string;
   languageButtonLabel: string;
@@ -58,6 +58,22 @@ const languageDisplayNames: Record<Language, string> = {
   en: "English",
   ja: "日本語",
 };
+
+const LINK_CLASS = "text-sky-600 hover:underline";
+const NOMINATIM_URL = "https://nominatim.org/";
+const OSM_URL = "https://www.openstreetmap.org/";
+
+const NOMINATIM_LINK = (
+  <a href={NOMINATIM_URL} className={LINK_CLASS} target="_blank" rel="noreferrer">
+    Nominatim
+  </a>
+);
+
+const OSM_LINK = (
+  <a href={OSM_URL} className={LINK_CLASS} target="_blank" rel="noreferrer">
+    OpenStreetMap
+  </a>
+);
 
 const translations: Record<Language, Translation> = {
   en: {
@@ -87,8 +103,11 @@ const translations: Record<Language, Translation> = {
     editLabelButton: "Edit label",
     deleteSavedLabel: (label: string) => `Delete ${label}`,
     mapPopupTitle: "Center",
-    footerNote:
-      "* Search uses Nominatim (OpenStreetMap). Review the usage policy for high-frequency or commercial use.",
+    footerNote: (
+      <>
+        * Search uses {NOMINATIM_LINK} ({OSM_LINK}). Review the usage policy for high-frequency or commercial use.
+      </>
+    ),
     confirmDelete: "Delete this location?",
     formatDefaultSavedLabel: (lat: number, lng: number) => `Point ${lat.toFixed(4)}, ${lng.toFixed(4)}`,
     languageButtonLabel: "Language",
@@ -120,8 +139,11 @@ const translations: Record<Language, Translation> = {
     editLabelButton: "ラベルを編集",
     deleteSavedLabel: (label: string) => `${label} を削除`,
     mapPopupTitle: "中心点",
-    footerNote:
-      "* 検索は Nominatim (OpenStreetMap) を使用しています。高頻度利用や商用利用時は各種ポリシーの遵守をご確認ください。",
+    footerNote: (
+      <>
+        * 検索は {NOMINATIM_LINK} ({OSM_LINK}) を使用しています。高頻度利用や商用利用時は各種ポリシーの遵守をご確認ください。
+      </>
+    ),
     confirmDelete: "この地点を削除しますか？",
     formatDefaultSavedLabel: (lat: number, lng: number) => `地点 ${lat.toFixed(4)}, ${lng.toFixed(4)}`,
     languageButtonLabel: "表示言語",
