@@ -191,6 +191,10 @@ export default function App() {
   };
 
   const handleDeleteLocation = (id: string) => {
+    if (typeof window !== "undefined") {
+      const ok = window.confirm("この地点を削除しますか？");
+      if (!ok) return;
+    }
     setSavedLocations((prev) => prev.filter((loc) => loc.id !== id));
     if (selectedLocationId === id) setSelectedLocationId(null);
     if (editingId === id) {
