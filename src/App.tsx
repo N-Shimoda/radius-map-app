@@ -18,8 +18,14 @@ type GeocodeResult = {
   lon: string;
   type?: string;
 };
+type SavedLocation = LatLng & { id: string; label: string };
 
 const DEFAULT_CENTER: LatLng = { lat: 35.681236, lng: 139.767125 }; // 東京駅
+const SAVED_LOCATIONS_KEY = "radius-map-app:saved-locations";
+const generateId = () =>
+  typeof crypto !== "undefined" && "randomUUID" in crypto
+    ? crypto.randomUUID()
+    : `${Date.now()}-${Math.random().toString(16).slice(2)}`;
 
 function RecenterOn({ center }: { center: LatLng }) {
   const map = useMap();
@@ -61,6 +67,8 @@ export default function App() {
   const [search, setSearch] = useState("");
   const [results, setResults] = useState<GeocodeResult[]>([]);
   const [isSearching, setIsSearching] = useState(false);
+  const [savedLocations, setSavedLocations] = useState<SavedLocation[]>([]);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const debSearch = useDebounced(search, 400);
 
   const radiusMeters = useMemo(() => {
@@ -127,77 +135,209 @@ export default function App() {
     return `${(m / 1609.344).toFixed(3)} mi`;
   };
 
+  // Load saved locations lazily from localStorage
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      const raw = localStorage.getItem(SAVED_LOCATIONS_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) {
+          setSavedLocations(
+            parsed
+              .map((item) => ({
+                id: typeof item.id === "string" ? item.id : generateId(),
+                label: typeof item.label === "string" ? item.label : "",
+                lat: Number(item.lat),
+                lng: Number(item.lng),
+              }))
+              .filter((item) => Number.isFinite(item.lat) && Number.isFinite(item.lng)),
+          );
+        }
+      }
+    } catch {
+      setSavedLocations([]);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    localStorage.setItem(SAVED_LOCATIONS_KEY, JSON.stringify(savedLocations));
+  }, [savedLocations]);
+
+  const handleSaveLocation = () => {
+    const label =
+      search.trim() ||
+      `地点 ${center.lat.toFixed(4)}, ${center.lng.toFixed(4)}`;
+    setSavedLocations((prev) => [
+      ...prev,
+      { id: generateId(), label, lat: center.lat, lng: center.lng },
+    ]);
+  };
+
+  const handleSelectSaved = (location: SavedLocation) => {
+    setCenter({ lat: location.lat, lng: location.lng });
+    setSearch(location.label);
+  };
+
+  const isCurrentLocationSaved = savedLocations.some(
+    (loc) => Math.abs(loc.lat - center.lat) < 1e-6 && Math.abs(loc.lng - center.lng) < 1e-6,
+  );
+
   return (
     // 画面全高 + 縦方向レイアウト
     <div className="min-h-screen h-screen bg-slate-50 text-slate-900 flex flex-col">
       <header className="sticky top-0 z-[1000] bg-white/80 backdrop-blur border-b border-slate-200">
-        <div className="w-full px-6 py-3 flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
-          <div className="flex-1 min-w-[200px]">
+        <div className="w-full px-6 py-3 flex items-center gap-3">
+          <button
+            type="button"
+            onClick={() => setIsSidebarOpen((prev) => !prev)}
+            className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-slate-300 bg-white text-slate-600 hover:border-slate-400"
+            aria-pressed={isSidebarOpen}
+            aria-label={isSidebarOpen ? "サイドバーを隠す" : "サイドバーを表示"}
+          >
+            <svg
+              className="h-5 w-5"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
+              {isSidebarOpen ? (
+                <>
+                  <line x1="4" y1="12" x2="20" y2="12" />
+                  <polyline points="10 18 4 12 10 6" />
+                </>
+              ) : (
+                <>
+                  <line x1="4" y1="6" x2="20" y2="6" />
+                  <line x1="4" y1="12" x2="20" y2="12" />
+                  <line x1="4" y1="18" x2="20" y2="18" />
+                </>
+              )}
+            </svg>
+          </button>
+          <div>
             <h1 className="text-2xl font-semibold">半径可視化マップ</h1>
             <p className="text-sm text-slate-600">地図上の地点から半径を図示。郵便番号や施設名で検索できます。</p>
-          </div>
-          <div className="flex flex-wrap items-end gap-3">
-            <div className="flex flex-col">
-              <label className="text-xs text-slate-600">半径</label>
-              <input
-                type="number"
-                step="0.1"
-                min={0}
-                value={radiusInput}
-                onChange={(e) => setRadiusInput(e.target.value)}
-                className="h-10 w-28 rounded-xl border border-slate-300 px-3 focus:outline-none focus:ring-2 focus:ring-sky-400"
-              />
-            </div>
-            <div className="flex flex-col">
-              <label className="text-xs text-slate-600">単位</label>
-              <select
-                className="h-10 w-28 rounded-xl border border-slate-300 px-3 bg-white"
-                value={unit}
-                onChange={(e) => setUnit(e.target.value as any)}
-              >
-                <option value="km">km</option>
-                <option value="mi">mile</option>
-              </select>
-            </div>
-            <div className="flex-1 min-w-[280px]">
-              <label className="text-xs text-slate-600">場所検索（郵便番号・施設名など）</label>
-              <div className="relative">
-                <input
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" && results[0]) handleSelectPlace(results[0]);
-                  }}
-                  placeholder="例：606-8501 / 京都大学 吉田キャンパス / Tokyo Station"
-                  className="h-10 w-full rounded-xl border border-slate-300 px-3 pr-10 focus:outline-none focus:ring-2 focus:ring-sky-400"
-                />
-                <div className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-slate-500">
-                  {isSearching ? "検索中…" : results.length ? `${results.length}件` : ""}
-                </div>
-                {results.length > 0 && (
-                  <div className="absolute z-[1100] mt-1 w-full rounded-xl border border-slate-200 bg-white shadow">
-                    {results.map((g, i) => (
-                      <button
-                        key={i}
-                        onClick={() => handleSelectPlace(g)}
-                        className="block w-full text-left px-3 py-2 hover:bg-slate-50"
-                      >
-                        <div className="text-sm line-clamp-1" title={g.display_name}>{g.display_name}</div>
-                        <div className="text-xs text-slate-500">{g.type}</div>
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
           </div>
         </div>
       </header>
 
-      {/* 縦方向のflexカラム。gapで下テキストとの重なりを回避 */}
-      <main className="flex-1 w-full px-6 py-4 pb-4 flex flex-col gap-3">
-        {/* 地図ラッパはflex-1で残り高さを全て使う */}
-        <div className="rounded-lg overflow-hidden border border-slate-200 flex-1">
+      {/* map + sidebar layout */}
+      <main className="flex-1 w-full px-6 py-4 pb-4 flex flex-col gap-4 md:flex-row">
+        {/* sidebar */}
+        {isSidebarOpen && (
+          <aside className="text-sm text-slate-700 shrink-0 md:w-80 lg:w-96 space-y-4 order-2 md:order-1">
+            <div className="border border-slate-200 rounded-xl p-4 bg-white shadow-sm space-y-4">
+              <div className="flex gap-3">
+                <div className="flex flex-col gap-2 flex-1">
+                  <label className="text-xs text-slate-600">半径</label>
+                  <input
+                    type="number"
+                    step="0.1"
+                    min={0}
+                    value={radiusInput}
+                    onChange={(e) => setRadiusInput(e.target.value)}
+                    className="h-10 rounded-xl border border-slate-300 px-3 focus:outline-none focus:ring-2 focus:ring-sky-400"
+                  />
+                </div>
+                <div className="flex flex-col gap-2 flex-1">
+                  <label className="text-xs text-slate-600">単位</label>
+                  <select
+                    className="h-10 rounded-xl border border-slate-300 px-3 bg-white"
+                    value={unit}
+                    onChange={(e) => setUnit(e.target.value as any)}
+                  >
+                    <option value="km">km</option>
+                    <option value="mi">mile</option>
+                  </select>
+                </div>
+              </div>
+              <div>
+                <label className="text-xs text-slate-600">場所検索（郵便番号・施設名など）</label>
+                <div className="relative mt-1">
+                  <input
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && results[0]) handleSelectPlace(results[0]);
+                    }}
+                    placeholder="例：606-8501 / 京都大学 吉田キャンパス / Tokyo Station"
+                    className="h-10 w-full rounded-xl border border-slate-300 px-3 pr-10 focus:outline-none focus:ring-2 focus:ring-sky-400"
+                  />
+                  <div className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-slate-500">
+                    {isSearching ? "検索中…" : results.length ? `${results.length}件` : ""}
+                  </div>
+                  {results.length > 0 && (
+                    <div className="absolute z-[1100] mt-1 w-full rounded-xl border border-slate-200 bg-white shadow">
+                      {results.map((g, i) => (
+                        <button
+                          key={i}
+                          onClick={() => handleSelectPlace(g)}
+                          className="block w-full text-left px-3 py-2 hover:bg-slate-50"
+                        >
+                          <div className="text-sm line-clamp-1" title={g.display_name}>{g.display_name}</div>
+                          <div className="text-xs text-slate-500">{g.type}</div>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <div className="border border-slate-200 rounded-xl p-4 bg-white shadow-sm">
+              <div className="font-semibold text-slate-900 mb-2">現在の地点</div>
+              <dl className="text-xs space-y-2">
+                <div>
+                  <dt className="text-slate-500">半径</dt>
+                  <dd className="font-mono text-base">{metersToReadable(radiusMeters)}</dd>
+                </div>
+                <div>
+                  <dt className="text-slate-500">中心座標</dt>
+                  <dd className="font-mono text-base">
+                    {center.lat.toFixed(5)}, {center.lng.toFixed(5)}
+                  </dd>
+                </div>
+              </dl>
+              <p className="text-xs text-slate-500 mt-3">地図をクリックして中心点を変更できます。</p>
+              <button
+                onClick={handleSaveLocation}
+                disabled={isCurrentLocationSaved}
+                className="mt-4 w-full rounded-lg bg-sky-600 text-white px-4 py-2 text-sm font-semibold disabled:bg-slate-300"
+              >
+                {isCurrentLocationSaved ? "保存済みの地点" : "この地点を保存"}
+              </button>
+            </div>
+            <div className="border border-slate-200 rounded-xl p-4 bg-white shadow-sm flex-1 min-h-[180px]">
+              <div className="font-semibold text-slate-900 mb-2">保存した地点</div>
+              {savedLocations.length === 0 ? (
+                <div className="text-xs text-slate-500">まだ保存された地点はありません。</div>
+              ) : (
+                <ul className="space-y-2 max-h-80 overflow-auto pr-1">
+                  {savedLocations.map((location) => (
+                    <li key={location.id}>
+                      <button
+                        onClick={() => handleSelectSaved(location)}
+                        className="w-full text-left border border-slate-200 rounded-lg px-3 py-2 hover:border-sky-400 hover:text-sky-600 transition text-xs"
+                      >
+                        <div className="font-medium">{location.label}</div>
+                        <div className="font-mono text-slate-500">{location.lat.toFixed(4)}, {location.lng.toFixed(4)}</div>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          </aside>
+        )}
+
+        {/* map area */}
+        <div className="rounded-lg overflow-hidden border border-slate-200 flex-1 min-h-[320px] order-1 md:order-2">
           <MapContainer
             center={[center.lat, center.lng]}
             zoom={13}
@@ -222,13 +362,6 @@ export default function App() {
               <Circle center={[center.lat, center.lng]} radius={radiusMeters} pathOptions={{ fillOpacity: 0.1 }} />
             )}
           </MapContainer>
-        </div>
-
-        {/* 情報列（mapの下）。shrink-0 なので高さが確保され、footerと重ならない */}
-        <div className="mt-0 text-sm text-slate-600 shrink-0">
-          現在の半径: <span className="font-mono">{metersToReadable(radiusMeters)}</span>{" "}
-          | 中心: <span className="font-mono">{center.lat.toFixed(5)}, {center.lng.toFixed(5)}</span>
-          <div className="mt-1">地図をクリックして中心点を変更できます。</div>
         </div>
       </main>
 
