@@ -276,7 +276,7 @@ export default function App() {
   const handleSelectPlace = (g: GeocodeResult) => {
     setCenter({ lat: parseFloat(g.lat), lng: parseFloat(g.lon) });
     setSearch(g.display_name);
-    setIsSearchLocked(false);
+    setIsSearchLocked(true);
     setResults([]);
   };
 
