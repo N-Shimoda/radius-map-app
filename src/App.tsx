@@ -19,6 +19,114 @@ type GeocodeResult = {
   type?: string;
 };
 type SavedLocation = LatLng & { id: string; label: string };
+type Language = "en" | "ja";
+
+type Translation = {
+  headerTitle: string;
+  headerDescription: string;
+  toggleSidebarShow: string;
+  toggleSidebarHide: string;
+  radiusLabel: string;
+  unitLabel: string;
+  unitKmOption: string;
+  unitMiOption: string;
+  searchLabel: string;
+  searchPlaceholder: string;
+  searchStatusSearching: string;
+  formatResultsCount: (count: number) => string;
+  currentLocationTitle: string;
+  radiusTerm: string;
+  centerCoordinatesTerm: string;
+  mapClickHint: string;
+  saveCurrentButton: string;
+  alreadySavedButton: string;
+  savedLocationsTitle: string;
+  noSavedLocations: string;
+  editLabelHeading: string;
+  saveLabelButton: string;
+  cancelButton: string;
+  editLabelButton: string;
+  deleteSavedLabel: (label: string) => string;
+  mapPopupTitle: string;
+  footerNote: string;
+  confirmDelete: string;
+  formatDefaultSavedLabel: (lat: number, lng: number) => string;
+  languageButtonLabel: string;
+};
+
+const languageDisplayNames: Record<Language, string> = {
+  en: "English",
+  ja: "日本語",
+};
+
+const translations: Record<Language, Translation> = {
+  en: {
+    headerTitle: "Radius Visualization Map",
+    headerDescription: "Visualize circles from any map point and search by postal code or place.",
+    toggleSidebarShow: "Show sidebar",
+    toggleSidebarHide: "Hide sidebar",
+    radiusLabel: "Radius",
+    unitLabel: "Unit",
+    unitKmOption: "km",
+    unitMiOption: "mile",
+    searchLabel: "Place search (postal code, facility, etc.)",
+    searchPlaceholder: "e.g., 606-8501 / Kyoto University Yoshida Campus / Tokyo Station",
+    searchStatusSearching: "Searching...",
+    formatResultsCount: (count: number) => `${count} results`,
+    currentLocationTitle: "Current Location",
+    radiusTerm: "Radius",
+    centerCoordinatesTerm: "Center coordinates",
+    mapClickHint: "Click the map to change the center point.",
+    saveCurrentButton: "Save this location",
+    alreadySavedButton: "Location saved",
+    savedLocationsTitle: "Saved Locations",
+    noSavedLocations: "No locations saved yet.",
+    editLabelHeading: "Edit label",
+    saveLabelButton: "Save",
+    cancelButton: "Cancel",
+    editLabelButton: "Edit label",
+    deleteSavedLabel: (label: string) => `Delete ${label}`,
+    mapPopupTitle: "Center",
+    footerNote:
+      "* Search uses Nominatim (OpenStreetMap). Review the usage policy for high-frequency or commercial use.",
+    confirmDelete: "Delete this location?",
+    formatDefaultSavedLabel: (lat: number, lng: number) => `Point ${lat.toFixed(4)}, ${lng.toFixed(4)}`,
+    languageButtonLabel: "Language",
+  },
+  ja: {
+    headerTitle: "半径可視化マップ",
+    headerDescription: "地図上の地点から半径を図示。郵便番号や施設名で検索できます。",
+    toggleSidebarShow: "サイドバーを表示",
+    toggleSidebarHide: "サイドバーを隠す",
+    radiusLabel: "半径",
+    unitLabel: "単位",
+    unitKmOption: "km",
+    unitMiOption: "マイル",
+    searchLabel: "場所検索（郵便番号・施設名など）",
+    searchPlaceholder: "例：606-8501 / 京都大学 吉田キャンパス / Tokyo Station",
+    searchStatusSearching: "検索中…",
+    formatResultsCount: (count: number) => `${count}件`,
+    currentLocationTitle: "現在の地点",
+    radiusTerm: "半径",
+    centerCoordinatesTerm: "中心座標",
+    mapClickHint: "地図をクリックして中心点を変更できます。",
+    saveCurrentButton: "この地点を保存",
+    alreadySavedButton: "保存済みの地点",
+    savedLocationsTitle: "保存した地点",
+    noSavedLocations: "まだ保存された地点はありません。",
+    editLabelHeading: "ラベルを編集",
+    saveLabelButton: "保存",
+    cancelButton: "キャンセル",
+    editLabelButton: "ラベルを編集",
+    deleteSavedLabel: (label: string) => `${label} を削除`,
+    mapPopupTitle: "中心点",
+    footerNote:
+      "* 検索は Nominatim (OpenStreetMap) を使用しています。高頻度利用や商用利用時は各種ポリシーの遵守をご確認ください。",
+    confirmDelete: "この地点を削除しますか？",
+    formatDefaultSavedLabel: (lat: number, lng: number) => `地点 ${lat.toFixed(4)}, ${lng.toFixed(4)}`,
+    languageButtonLabel: "表示言語",
+  },
+};
 
 const DEFAULT_CENTER: LatLng = { lat: 35.681236, lng: 139.767125 }; // Tokyo Station
 const SAVED_LOCATIONS_KEY = "radius-map-app:saved-locations";
@@ -72,7 +180,10 @@ export default function App() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingLabel, setEditingLabel] = useState("");
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [language, setLanguage] = useState<Language>("ja");
   const debSearch = useDebounced(search, 400);
+  const t = translations[language];
+  const languageOptions: Language[] = ["en", "ja"];
 
   const radiusMeters = useMemo(() => {
     const r = Number(radiusInput);
@@ -96,7 +207,7 @@ export default function App() {
         url.searchParams.set("q", q);
         url.searchParams.set("addressdetails", "0");
         url.searchParams.set("limit", "8");
-        url.searchParams.set("accept-language", "ja");
+        url.searchParams.set("accept-language", language);
         const res = await fetch(url.toString());
         if (!res.ok) throw new Error("Search failed");
         const data: GeocodeResult[] = await res.json();
@@ -110,7 +221,7 @@ export default function App() {
     return () => {
       canceled = true;
     };
-  }, [debSearch]);
+  }, [debSearch, language]);
 
   // Click on map to set center
   function ClickSetter() {
@@ -169,9 +280,7 @@ export default function App() {
   }, [savedLocations]);
 
   const handleSaveLocation = () => {
-    const label =
-      search.trim() ||
-      `地点 ${center.lat.toFixed(4)}, ${center.lng.toFixed(4)}`;
+    const label = search.trim() || t.formatDefaultSavedLabel(center.lat, center.lng);
     setSavedLocations((prev) => [
       ...prev,
       { id: generateId(), label, lat: center.lat, lng: center.lng },
@@ -192,7 +301,7 @@ export default function App() {
 
   const handleDeleteLocation = (id: string) => {
     if (typeof window !== "undefined") {
-      const ok = window.confirm("この地点を削除しますか？");
+      const ok = window.confirm(t.confirmDelete);
       if (!ok) return;
     }
     setSavedLocations((prev) => prev.filter((loc) => loc.id !== id));
@@ -227,32 +336,62 @@ export default function App() {
     // Ensure full-height layout with vertical stacking
     <div className="min-h-screen h-screen bg-slate-50 text-slate-900 flex flex-col">
       <header className="sticky top-0 z-[1000] bg-white/80 backdrop-blur border-b border-slate-200">
-        <div className="w-full px-6 py-3 flex items-center gap-3">
-          <button
-            type="button"
-            onClick={() => setIsSidebarOpen((prev) => !prev)}
-            className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-slate-300 bg-white text-slate-600 hover:border-slate-400"
-            aria-pressed={isSidebarOpen}
-            aria-label={isSidebarOpen ? "サイドバーを隠す" : "サイドバーを表示"}
-          >
-            <svg
-              className="h-5 w-5"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              aria-hidden="true"
+        <div className="w-full px-6 py-3 flex items-center gap-3 justify-between">
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => setIsSidebarOpen((prev) => !prev)}
+              className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-slate-300 bg-white text-slate-600 hover:border-slate-400"
+              aria-pressed={isSidebarOpen}
+              aria-label={isSidebarOpen ? t.toggleSidebarHide : t.toggleSidebarShow}
             >
-              <line x1="4" y1="6" x2="20" y2="6" />
-              <line x1="4" y1="12" x2="20" y2="12" />
-              <line x1="4" y1="18" x2="20" y2="18" />
-            </svg>
-          </button>
-          <div>
-            <h1 className="text-2xl font-semibold">半径可視化マップ</h1>
-            <p className="text-sm text-slate-600">地図上の地点から半径を図示。郵便番号や施設名で検索できます。</p>
+              <svg
+                className="h-5 w-5"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden="true"
+              >
+                <line x1="4" y1="6" x2="20" y2="6" />
+                <line x1="4" y1="12" x2="20" y2="12" />
+                <line x1="4" y1="18" x2="20" y2="18" />
+              </svg>
+            </button>
+            <div>
+              <h1 className="text-2xl font-semibold">{t.headerTitle}</h1>
+              <p className="text-sm text-slate-600">{t.headerDescription}</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <div
+              className="inline-flex rounded-full border border-slate-300 bg-white shadow-sm overflow-hidden"
+              role="group"
+              aria-label={t.languageButtonLabel}
+            >
+              {languageOptions.map((option, index) => {
+                const isActive = language === option;
+                return (
+                  <button
+                    key={option}
+                    type="button"
+                    onClick={() => setLanguage(option)}
+                    className={`px-4 py-1.5 text-sm font-semibold transition ${
+                      isActive
+                        ? "bg-sky-600 text-white"
+                        : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
+                    } ${index === 0 ? "rounded-l-full" : ""} ${
+                      index === languageOptions.length - 1 ? "rounded-r-full" : ""
+                    }`}
+                    aria-pressed={isActive}
+                  >
+                    {languageDisplayNames[option]}
+                  </button>
+                );
+              })}
+            </div>
           </div>
         </div>
       </header>
@@ -265,7 +404,7 @@ export default function App() {
             <div className="border border-slate-200 rounded-xl p-4 bg-white shadow-sm space-y-4">
               <div className="flex gap-3">
                 <div className="flex flex-col gap-2 flex-1">
-                  <label className="text-xs text-slate-600">半径</label>
+                  <label className="text-xs text-slate-600">{t.radiusLabel}</label>
                   <input
                     type="number"
                     step="0.1"
@@ -276,19 +415,19 @@ export default function App() {
                   />
                 </div>
                 <div className="flex flex-col gap-2 flex-1">
-                  <label className="text-xs text-slate-600">単位</label>
+                  <label className="text-xs text-slate-600">{t.unitLabel}</label>
                   <select
                     className="h-10 rounded-xl border border-slate-300 px-3 bg-white"
                     value={unit}
                     onChange={(e) => setUnit(e.target.value as any)}
                   >
-                    <option value="km">km</option>
-                    <option value="mi">mile</option>
+                    <option value="km">{t.unitKmOption}</option>
+                    <option value="mi">{t.unitMiOption}</option>
                   </select>
                 </div>
               </div>
               <div>
-                <label className="text-xs text-slate-600">場所検索（郵便番号・施設名など）</label>
+                <label className="text-xs text-slate-600">{t.searchLabel}</label>
                 <div className="relative mt-1">
                   <input
                     value={search}
@@ -296,11 +435,15 @@ export default function App() {
                     onKeyDown={(e) => {
                       if (e.key === "Enter" && results[0]) handleSelectPlace(results[0]);
                     }}
-                    placeholder="例：606-8501 / 京都大学 吉田キャンパス / Tokyo Station"
+                    placeholder={t.searchPlaceholder}
                     className="h-10 w-full rounded-xl border border-slate-300 px-3 pr-10 focus:outline-none focus:ring-2 focus:ring-sky-400"
                   />
                   <div className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-slate-500">
-                    {isSearching ? "検索中…" : results.length ? `${results.length}件` : ""}
+                    {isSearching
+                      ? t.searchStatusSearching
+                      : results.length
+                        ? t.formatResultsCount(results.length)
+                        : ""}
                   </div>
                   {results.length > 0 && (
                     <div className="absolute z-[1100] mt-1 w-full rounded-xl border border-slate-200 bg-white shadow">
@@ -321,32 +464,32 @@ export default function App() {
             </div>
 
             <div className="border border-slate-200 rounded-xl p-4 bg-white shadow-sm">
-              <div className="font-semibold text-slate-900 mb-2">現在の地点</div>
+              <div className="font-semibold text-slate-900 mb-2">{t.currentLocationTitle}</div>
               <dl className="text-xs space-y-2">
                 <div>
-                  <dt className="text-slate-500">半径</dt>
+                  <dt className="text-slate-500">{t.radiusTerm}</dt>
                   <dd className="font-mono text-base">{metersToReadable(radiusMeters)}</dd>
                 </div>
                 <div>
-                  <dt className="text-slate-500">中心座標</dt>
+                  <dt className="text-slate-500">{t.centerCoordinatesTerm}</dt>
                   <dd className="font-mono text-base">
                     {center.lat.toFixed(5)}, {center.lng.toFixed(5)}
                   </dd>
                 </div>
               </dl>
-              <p className="text-xs text-slate-500 mt-3">地図をクリックして中心点を変更できます。</p>
+              <p className="text-xs text-slate-500 mt-3">{t.mapClickHint}</p>
               <button
                 onClick={handleSaveLocation}
                 disabled={isCurrentLocationSaved}
                 className="mt-4 w-full rounded-lg bg-sky-600 text-white px-4 py-2 text-sm font-semibold disabled:bg-slate-300"
               >
-                {isCurrentLocationSaved ? "保存済みの地点" : "この地点を保存"}
+                {isCurrentLocationSaved ? t.alreadySavedButton : t.saveCurrentButton}
               </button>
             </div>
             <div className="border border-slate-200 rounded-xl p-4 bg-white shadow-sm flex-1 min-h-[180px]">
-              <div className="font-semibold text-slate-900 mb-2">保存した地点</div>
+              <div className="font-semibold text-slate-900 mb-2">{t.savedLocationsTitle}</div>
               {savedLocations.length === 0 ? (
-                <div className="text-xs text-slate-500">まだ保存された地点はありません。</div>
+                <div className="text-xs text-slate-500">{t.noSavedLocations}</div>
               ) : (
                 <ul className="space-y-2 max-h-80 overflow-auto pr-1">
                   {savedLocations.map((location) => {
@@ -355,7 +498,7 @@ export default function App() {
                       <li key={location.id} className="text-xs">
                         {isEditing ? (
                           <div className="border border-sky-400 rounded-lg px-3 py-2 bg-sky-50">
-                            <label className="block text-[10px] text-slate-500 mb-1">ラベルを編集</label>
+                            <label className="block text-[10px] text-slate-500 mb-1">{t.editLabelHeading}</label>
                             <input
                               value={editingLabel}
                               onChange={(e) => setEditingLabel(e.target.value)}
@@ -373,14 +516,14 @@ export default function App() {
                                 disabled={!editingLabel.trim()}
                                 className="flex-1 rounded bg-sky-600 text-white py-1 font-semibold disabled:bg-slate-300"
                               >
-                                保存
+                                {t.saveLabelButton}
                               </button>
                               <button
                                 type="button"
                                 onClick={handleCancelEditing}
                                 className="flex-1 rounded border border-slate-200 text-slate-600 py-1"
                               >
-                                キャンセル
+                                {t.cancelButton}
                               </button>
                             </div>
                           </div>
@@ -415,11 +558,11 @@ export default function App() {
                                   }}
                                   className="flex-1 rounded border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-600 hover:border-sky-400 hover:text-sky-700"
                                 >
-                                  ラベルを編集
+                                  {t.editLabelButton}
                                 </button>
                                 <button
                                   type="button"
-                                  aria-label={`${location.label} を削除`}
+                                  aria-label={t.deleteSavedLabel(location.label)}
                                   onClick={(e) => {
                                     e.stopPropagation();
                                     handleDeleteLocation(location.id);
@@ -474,7 +617,8 @@ export default function App() {
             <ClickSetter />
             <Marker position={[center.lat, center.lng]}>
               <Popup>
-                中心点<br />
+                {t.mapPopupTitle}
+                <br />
                 {center.lat.toFixed(6)}, {center.lng.toFixed(6)}
               </Popup>
             </Marker>
@@ -485,9 +629,7 @@ export default function App() {
         </div>
       </main>
 
-      <footer className="w-full p-4 text-xs text-slate-500">
-        * 検索は Nominatim (OpenStreetMap) を使用しています。高頻度利用や商用利用時は各種ポリシーの遵守をご確認ください。
-      </footer>
+      <footer className="w-full p-4 text-xs text-slate-500">{t.footerNote}</footer>
     </div>
   );
 }
