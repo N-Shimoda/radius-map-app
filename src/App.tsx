@@ -101,7 +101,7 @@ const translations: Record<Language, Translation> = {
     radiusLabel: "半径",
     unitLabel: "単位",
     unitKmOption: "km",
-    unitMiOption: "マイル",
+    unitMiOption: "mile",
     searchLabel: "場所検索（郵便番号・施設名など）",
     searchPlaceholder: "例：606-8501 / 京都大学 吉田キャンパス / Tokyo Station",
     searchStatusSearching: "検索中…",
@@ -400,7 +400,7 @@ export default function App() {
       <main className="flex-1 w-full px-6 py-4 pb-4 flex flex-col gap-4 md:flex-row">
         {/* sidebar */}
         {isSidebarOpen && (
-          <aside className="text-sm text-slate-700 shrink-0 md:w-80 lg:w-96 space-y-4 order-2 md:order-1">
+          <aside className="text-sm text-slate-700 shrink-0 md:w-72 lg:w-80 space-y-4 order-2 md:order-1">
             <div className="border border-slate-200 rounded-xl p-4 bg-white shadow-sm space-y-4">
               <div className="flex gap-3">
                 <div className="flex flex-col gap-2 flex-1">
