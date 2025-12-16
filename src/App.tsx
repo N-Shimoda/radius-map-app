@@ -21,6 +21,24 @@ type GeocodeResult = {
 type SavedLocation = LatLng & { id: string; label: string };
 type Language = "en" | "ja";
 
+// Interface for uploaded JSON location items
+interface UploadedLocationItem {
+  id?: string | number | null;
+  label?: string | number | null;
+  lat: string | number;
+  lng: string | number;
+}
+
+// Type guard to validate uploaded location data
+function isValidUploadedItem(item: unknown): item is UploadedLocationItem {
+  return (
+    item !== null &&
+    typeof item === "object" &&
+    "lat" in item &&
+    "lng" in item
+  );
+}
+
 type Translation = {
   headerTitle: string;
   headerDescription: string;
@@ -360,15 +378,13 @@ export default function App() {
       if (!Array.isArray(parsed)) throw new Error("Invalid format");
       const normalized: SavedLocation[] = parsed
         .map((item) => {
-          if (!item) return null;
-          const lat = Number((item as any).lat);
-          const lng = Number((item as any).lng);
+          if (!isValidUploadedItem(item)) return null;
+          const lat = Number(item.lat);
+          const lng = Number(item.lng);
           if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
-          const labelValue = (item as any).label;
-          const rawLabel = typeof labelValue === "string" ? labelValue : "";
+          const rawLabel = typeof item.label === "string" ? item.label : "";
           const label = rawLabel.trim() || t.formatDefaultSavedLabel(lat, lng);
-          const itemId = (item as any).id;
-          const id = typeof itemId === "string" ? itemId : generateId();
+          const id = typeof item.id === "string" ? item.id : generateId();
           return { id, label, lat, lng };
         })
         .filter((entry): entry is SavedLocation => Boolean(entry));
