@@ -119,6 +119,44 @@ function useDebounced<T>(value: T, delay = 400) {
   return deb;
 }
 
+type LocationSummaryProps = {
+  label: string;
+  lat: number;
+  lng: number;
+  color: string;
+  colorLabel: string;
+  actionSlot?: React.ReactNode;
+};
+
+function LocationSummary({
+  label,
+  lat,
+  lng,
+  color,
+  colorLabel,
+  actionSlot,
+}: LocationSummaryProps) {
+  return (
+    <>
+      <div className="flex items-start justify-between gap-2">
+        <div>
+          <div className="font-medium text-slate-900 dark:text-slate-100">{label}</div>
+          <div className="font-mono text-xs text-slate-500 dark:text-slate-300">
+            {lat.toFixed(2)}, {lng.toFixed(2)}
+          </div>
+        </div>
+        <span
+          className="inline-flex h-4 w-4 rounded-full border border-slate-200 dark:border-slate-700"
+          style={{ backgroundColor: color }}
+          role="img"
+          aria-label={colorLabel}
+        />
+      </div>
+      {actionSlot ? <div className="mt-2 flex justify-end">{actionSlot}</div> : null}
+    </>
+  );
+}
+
 export default function App() {
   const [center, setCenter] = useState<LatLng>(DEFAULT_CENTER);
   const [unit, setUnit] = useState<"km" | "mi">("km");
@@ -675,31 +713,29 @@ export default function App() {
                   </select>
                 </div>
               </div>
-              <div className="pt-4 border-t border-slate-100 dark:border-slate-700 space-y-2">
-                <div className="flex items-center justify-between gap-3">
-                  <div className="text-xs text-slate-500 dark:text-slate-300">{t.currentLocationTitle}</div>
-                  <span
-                    className="inline-flex h-4 w-4 rounded-full border border-slate-200 dark:border-slate-600"
-                    style={{ backgroundColor: centerPinColor }}
-                    role="img"
-                    aria-label={t.circleColorLabel}
+              <div className="pt-4 border-t border-slate-100 dark:border-slate-700 space-y-3">
+                <div className="text-xs text-slate-500 dark:text-slate-300">{t.currentLocationTitle}</div>
+                <div className="w-full border rounded-lg px-3 py-2 bg-white/70 dark:bg-slate-900/40 border-slate-200 dark:border-slate-600">
+                  <LocationSummary
+                    label={sidebarLocationName}
+                    lat={center.lat}
+                    lng={center.lng}
+                    color={centerPinColor}
+                    colorLabel={t.circleColorLabel}
+                    actionSlot={
+                      <button
+                        type="button"
+                        onClick={() => setIsCircleVisible((prev) => !prev)}
+                        className={`rounded-full border px-2 py-1 text-[11px] font-semibold transition ${
+                          isCircleVisible
+                            ? "border-sky-200 text-sky-700 hover:border-sky-400 dark:border-sky-500 dark:text-sky-300"
+                            : "border-slate-200 text-slate-500 hover:border-slate-400 dark:border-slate-600 dark:text-slate-300"
+                        }`}
+                      >
+                        {isCircleVisible ? t.hideCircleButton : t.showCircleButton}
+                      </button>
+                    }
                   />
-                </div>
-                <div className="text-base font-medium text-slate-900 dark:text-slate-100">
-                  {sidebarLocationName}
-                </div>
-                <div className="flex justify-end">
-                  <button
-                    type="button"
-                    onClick={() => setIsCircleVisible((prev) => !prev)}
-                    className={`rounded-full border px-2 py-1 text-[11px] font-semibold transition ${
-                      isCircleVisible
-                        ? "border-sky-200 text-sky-700 hover:border-sky-400 dark:border-sky-500 dark:text-sky-300"
-                        : "border-slate-200 text-slate-500 hover:border-slate-400 dark:border-slate-600 dark:text-slate-300"
-                    }`}
-                  >
-                    {isCircleVisible ? t.hideCircleButton : t.showCircleButton}
-                  </button>
                 </div>
                 <button
                   onClick={handleSaveLocation}
@@ -845,18 +881,14 @@ export default function App() {
                                   : "border-slate-200 hover:border-sky-400 dark:border-slate-600 dark:hover:border-sky-500 bg-white/60 dark:bg-slate-900/30"
                               }`}
                             >
-                              <div className="flex items-start justify-between gap-2">
-                                <div>
-                                  <div className="font-medium">{location.label}</div>
-                                  <div className="font-mono text-slate-500 dark:text-slate-300">
-                                    {location.lat.toFixed(2)}, {location.lng.toFixed(2)}
-                                  </div>
-                                </div>
-                                <div className="pt-0.5">{colorBadge}</div>
-                              </div>
-                              <div className="mt-2 flex justify-end">
-                                {renderVisibilityButton(true)}
-                              </div>
+                              <LocationSummary
+                                label={location.label}
+                                lat={location.lat}
+                                lng={location.lng}
+                                color={locationColor}
+                                colorLabel={t.circleColorLabel}
+                                actionSlot={renderVisibilityButton(true)}
+                              />
                               {isSelected && (
                                 <div className="mt-2 flex gap-2">
                                   <button
