@@ -115,7 +115,7 @@ const translations: Record<Language, Translation> = {
     unitLabel: "単位",
     unitKmOption: "km",
     unitMiOption: "mile",
-    searchLabel: "場所検索（郵便番号・施設名など）",
+    searchLabel: "名称を入力",
     searchPlaceholder: "例：606-8501 / 京都大学 吉田キャンパス / Tokyo Station",
     searchStatusSearching: "検索中…",
     formatResultsCount: (count: number) => `${count}件`,
@@ -629,9 +629,10 @@ export default function App() {
       <main className="flex-1 min-h-0 w-full px-6 py-4 pb-4 flex flex-col gap-4 md:flex-row md:overflow-hidden">
         {/* sidebar */}
         {isSidebarOpen && (
-          <aside className="text-sm text-slate-700 dark:text-slate-200 shrink-0 md:w-72 lg:w-80 flex flex-col gap-4 order-2 md:order-1 md:max-h-full md:min-h-0 overflow-auto">
+          <aside className="text-sm text-slate-700 dark:text-slate-200 shrink-0 md:w-72 lg:w-80 flex flex-col gap-4 order-2 md:order-1 md:max-h-full md:min-h-0 overflow-y-auto overflow-x-hidden">
             <div className="border border-slate-200 dark:border-slate-700 rounded-xl p-4 bg-white dark:bg-slate-800 shadow-sm space-y-4">
               <div>
+                <div className="text-sm font-semibold text-slate-900 dark:text-slate-100 mb-2">{language === "ja" ? "地点検索" : "Location Search"}</div>
                 <label className="text-xs text-slate-600 dark:text-slate-300">{t.searchLabel}</label>
                 <div className="relative mt-1">
                   <input
