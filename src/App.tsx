@@ -191,12 +191,30 @@ const translations: Record<Language, Translation> = {
   },
 };
 
-const DEFAULT_CIRCLE_COLOR = "#2563eb";
+const CIRCLE_COLORS = [
+  "#2563eb",
+  "#f97316",
+  "#22c55e",
+  "#d946ef",
+  "#ef4444",
+  "#14b8a6",
+  "#a855f7",
+  "#eab308",
+];
+const DEFAULT_CIRCLE_COLOR = CIRCLE_COLORS[0];
+const getPaletteColor = (index: number) => CIRCLE_COLORS[index % CIRCLE_COLORS.length];
 
-const randomCircleColor = () =>
-  `#${Math.floor(Math.random() * 0xffffff)
-    .toString(16)
-    .padStart(6, "0")}`;
+const createColoredPinIcon = (color: string) =>
+  L.divIcon({
+    className: "",
+    html: `<svg width="32" height="48" viewBox="0 0 32 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M16 1.5C8.11116 1.5 1.5 8.11116 1.5 16C1.5 27.5174 16 46.5 16 46.5C16 46.5 30.5 27.5174 30.5 16C30.5 8.11116 23.8888 1.5 16 1.5Z" fill="${color}" stroke="white" stroke-width="3"/>
+      <circle cx="16" cy="16" r="5.25" fill="white"/>
+    </svg>`,
+    iconSize: [32, 48],
+    iconAnchor: [16, 46],
+    popupAnchor: [0, -36],
+  });
 
 const DEFAULT_CENTER: LatLng = { lat: 35.681236, lng: 139.767125 }; // Tokyo Station
 const SAVED_LOCATIONS_KEY = "radius-map-app:saved-locations";
@@ -213,7 +231,6 @@ function RecenterOn({ center }: { center: LatLng }) {
   return null;
 }
 
-// Added: re-layout when the container size changes so map bounds stay correct
 function InvalidateSizeOnResize() {
   const map = useMap();
   useEffect(() => {
@@ -367,7 +384,7 @@ export default function App() {
         if (Array.isArray(parsed)) {
           setSavedLocations(
             parsed
-              .map((item) => ({
+              .map((item, index) => ({
                 id: typeof item.id === "string" ? item.id : generateId(),
                 label: typeof item.label === "string" ? item.label : "",
                 lat: Number(item.lat),
@@ -376,7 +393,7 @@ export default function App() {
                 color:
                   typeof item.color === "string" && item.color.trim()
                     ? item.color
-                    : randomCircleColor(),
+                    : getPaletteColor(index),
               }))
               .filter((item) => Number.isFinite(item.lat) && Number.isFinite(item.lng)),
           );
@@ -402,7 +419,7 @@ export default function App() {
         lat: center.lat,
         lng: center.lng,
         visible: true,
-        color: randomCircleColor(),
+        color: getPaletteColor(prev.length),
       },
     ]);
   };
@@ -459,7 +476,7 @@ export default function App() {
       const parsed = JSON.parse(text);
       if (!Array.isArray(parsed)) throw new Error("Invalid format");
       const normalized: SavedLocation[] = parsed
-        .map((item) => {
+        .map((item, index) => {
           if (!isValidUploadedItem(item)) return null;
           const lat = Number(item.lat);
           const lng = Number(item.lng);
@@ -472,7 +489,7 @@ export default function App() {
           const color =
             typeof item.color === "string" && item.color.trim()
               ? item.color
-              : randomCircleColor();
+              : getPaletteColor(index);
           return { id, label, lat, lng, visible, color };
         })
         .filter((entry): entry is SavedLocation => Boolean(entry));
@@ -554,6 +571,17 @@ export default function App() {
     ? savedLocations.find((loc) => loc.id === selectedLocationId)
     : null;
   const selectedLocationColor = selectedLocation?.color ?? null;
+  const pinIconCache = useMemo(() => new Map<string, L.DivIcon>(), []);
+  const getPinIcon = useCallback(
+    (color: string) => {
+      const safeColor = color || DEFAULT_CIRCLE_COLOR;
+      if (!pinIconCache.has(safeColor)) {
+        pinIconCache.set(safeColor, createColoredPinIcon(safeColor));
+      }
+      return pinIconCache.get(safeColor)!;
+    },
+    [pinIconCache],
+  );
 
   useEffect(() => {
     if (reopenPopupRef.current && markerRef.current) {
@@ -572,6 +600,7 @@ export default function App() {
   const popupLabel = selectedLocation
     ? formatPopupLabel(selectedLocation.label)
     : formatPopupLabel(pinLabelOverride) ?? t.mapPopupTitle;
+  const centerPinColor = selectedLocationColor ?? DEFAULT_CIRCLE_COLOR;
 
   return (
     <>
@@ -928,7 +957,7 @@ export default function App() {
             <InvalidateSizeOnResize />
             <RecenterOn center={center} />
             <ClickSetter />
-            <Marker position={[center.lat, center.lng]} ref={markerRef}>
+            <Marker position={[center.lat, center.lng]} ref={markerRef} icon={getPinIcon(centerPinColor)}>
               <Popup>
                 {popupLabel}
                 <br />
@@ -948,19 +977,21 @@ export default function App() {
                 />
                 {savedLocations.map((location) => {
                   if (!location.visible || location.id === selectedLocationId) return null;
-                  const color = location.color;
+                  const color = location.color || DEFAULT_CIRCLE_COLOR;
                   return (
-                    <Circle
-                      key={`saved-circle-${location.id}`}
-                      center={[location.lat, location.lng]}
-                      radius={radiusMeters}
-                      pathOptions={{
-                        color,
-                        fillColor: color,
-                        fillOpacity: 0.08,
-                        weight: 1.5,
-                      }}
-                    />
+                    <React.Fragment key={`saved-location-${location.id}`}>
+                      <Circle
+                        center={[location.lat, location.lng]}
+                        radius={radiusMeters}
+                        pathOptions={{
+                          color,
+                          fillColor: color,
+                          fillOpacity: 0.08,
+                          weight: 1.5,
+                        }}
+                      />
+                      <Marker position={[location.lat, location.lng]} icon={getPinIcon(color)} />
+                    </React.Fragment>
                   );
                 })}
               </>
