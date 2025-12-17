@@ -198,6 +198,26 @@ const randomCircleColor = () =>
     .toString(16)
     .padStart(6, "0")}`;
 
+const colorWithAlpha = (color: string, alpha: number) => {
+  const trimmed = color?.trim();
+  if (!trimmed) return color;
+  const match = trimmed.match(/^#([0-9a-f]{3}|[0-9a-f]{6})$/i);
+  if (!match) return color;
+  let hex = match[1];
+  if (hex.length === 3) {
+    hex = hex
+      .split("")
+      .map((char) => char + char)
+      .join("");
+  }
+  const value = parseInt(hex, 16);
+  const r = (value >> 16) & 255;
+  const g = (value >> 8) & 255;
+  const b = value & 255;
+  const safeAlpha = Math.min(1, Math.max(0, alpha));
+  return `rgba(${r}, ${g}, ${b}, ${safeAlpha})`;
+};
+
 const DEFAULT_CENTER: LatLng = { lat: 35.681236, lng: 139.767125 }; // Tokyo Station
 const SAVED_LOCATIONS_KEY = "radius-map-app:saved-locations";
 const generateId = () =>
@@ -765,17 +785,9 @@ export default function App() {
                     {savedLocations.map((location) => {
                       const isEditing = editingId === location.id;
                       const isSelected = selectedLocationId === location.id;
-                      const locationColor = location.color;
-                      const renderColorLegend = () => (
-                        <div className="flex items-center gap-2 text-[11px] text-slate-500 dark:text-slate-400">
-                          <span
-                            className="inline-flex h-3 w-3 rounded-full border border-white shadow"
-                            style={{ backgroundColor: locationColor }}
-                            aria-hidden="true"
-                          />
-                          <span>{t.circleColorLabel}</span>
-                        </div>
-                      );
+                      const locationColor = location.color || DEFAULT_CIRCLE_COLOR;
+                      const itemBackground = colorWithAlpha(locationColor, isSelected ? 0.28 : 0.12);
+                      const editingBackground = colorWithAlpha(locationColor, 0.22);
                       const renderVisibilityButton = (stopPropagation = false) => (
                         <button
                           type="button"
@@ -795,7 +807,13 @@ export default function App() {
                       return (
                         <li key={location.id} className="text-xs">
                           {isEditing ? (
-                            <div className="border border-sky-400 dark:border-sky-500 rounded-lg px-3 py-2 bg-sky-50 dark:bg-slate-900/40">
+                            <div
+                              className="border rounded-lg px-3 py-2"
+                              style={{
+                                backgroundColor: editingBackground,
+                                borderColor: locationColor,
+                              }}
+                            >
                               <label className="block text-[10px] text-slate-500 dark:text-slate-400 mb-1">{t.editLabelHeading}</label>
                               <input
                                 value={editingLabel}
@@ -824,8 +842,7 @@ export default function App() {
                                   {t.cancelButton}
                                 </button>
                               </div>
-                              <div className="mt-3 flex items-center justify-between">
-                                {renderColorLegend()}
+                              <div className="mt-3 flex justify-end">
                                 {renderVisibilityButton()}
                               </div>
                             </div>
@@ -840,18 +857,21 @@ export default function App() {
                                   handleSelectSaved(location);
                                 }
                               }}
-                              className={`w-full border rounded-lg px-3 py-2 transition ${
-                                selectedLocationId === location.id
-                                  ? "border-sky-500 text-sky-700 shadow-inner dark:border-sky-400 dark:text-sky-300"
-                                  : "border-slate-200 hover:border-sky-400 hover:text-sky-600 dark:border-slate-600 dark:hover:border-sky-500 dark:hover:text-sky-300"
+                              className={`w-full border rounded-lg px-3 py-2 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 ${
+                                isSelected
+                                  ? "shadow-inner"
+                                  : "border-slate-200 hover:border-sky-400 dark:border-slate-600 dark:hover:border-sky-500"
                               }`}
+                              style={{
+                                backgroundColor: itemBackground,
+                                borderColor: isSelected ? locationColor : undefined,
+                              }}
                             >
                               <div className="font-medium">{location.label}</div>
                               <div className="font-mono text-slate-500 dark:text-slate-300">
                                 {location.lat.toFixed(4)}, {location.lng.toFixed(4)}
                               </div>
-                              <div className="mt-2 flex items-center justify-between">
-                                {renderColorLegend()}
+                              <div className="mt-2 flex justify-end">
                                 {renderVisibilityButton(true)}
                               </div>
                               {isSelected && (
