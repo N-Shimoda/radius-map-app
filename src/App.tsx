@@ -535,10 +535,13 @@ export default function App() {
     return trimmed || label;
   };
 
-  const popupLabel = selectedLocation
+  const computedLocationLabel = selectedLocation
     ? formatPopupLabel(selectedLocation.label)
-    : formatPopupLabel(pinLabelOverride) ?? t.mapPopupTitle;
+    : formatPopupLabel(pinLabelOverride);
+  const popupLabel = computedLocationLabel ?? t.mapPopupTitle;
   const centerPinColor = selectedLocationColor ?? CLICKED_CIRCLE_COLOR;
+  const sidebarFallbackLabel = `${center.lat.toFixed(2)}, ${center.lng.toFixed(2)}`;
+  const sidebarLocationName = computedLocationLabel ?? sidebarFallbackLabel;
   const searchStatusText = isReverseGeocoding
     ? t.reverseLookupStatus
     : reverseGeocodeError
@@ -682,8 +685,8 @@ export default function App() {
                     aria-label={t.circleColorLabel}
                   />
                 </div>
-                <div className="font-mono text-base">
-                  {center.lat.toFixed(2)}, {center.lng.toFixed(2)}
+                <div className="text-base font-medium text-slate-900 dark:text-slate-100">
+                  {sidebarLocationName}
                 </div>
                 <div className="flex justify-end">
                   <button
