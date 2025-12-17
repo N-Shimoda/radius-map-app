@@ -211,7 +211,7 @@ export function Sidebar({
             {t.savedLocationsTitle}
           </div>
           <div className="flex items-center gap-2">
-            <div className="relative group z-[1200]">
+            <div className="relative group z-[1050]">
               <button
                 type="button"
                 onClick={onTriggerUpload}
@@ -220,11 +220,11 @@ export function Sidebar({
               >
                 <IoCloudUploadOutline className="h-5 w-5" aria-hidden="true" />
               </button>
-              <div className="pointer-events-none absolute -top-9 left-1/2 -translate-x-1/2 rounded bg-white text-slate-900 text-[10px] px-2 py-1 whitespace-nowrap opacity-0 group-hover:opacity-100 group-hover:-translate-y-1 transition shadow dark:bg-slate-800 dark:text-slate-100 dark:shadow-lg z-[1300]">
+              <div className="pointer-events-none absolute -top-9 left-1/2 -translate-x-1/2 rounded bg-white text-slate-900 text-[10px] px-2 py-1 whitespace-nowrap opacity-0 group-hover:opacity-100 group-hover:-translate-y-1 transition shadow dark:bg-slate-800 dark:text-slate-100 dark:shadow-lg z-[1200]">
                 {t.uploadTooltip}
               </div>
             </div>
-            <div className="relative group z-[1200]">
+            <div className="relative group z-[1050]">
               <button
                 type="button"
                 onClick={onDownload}
@@ -234,7 +234,7 @@ export function Sidebar({
               >
                 <AiOutlineDownload className="h-5 w-5" aria-hidden="true" />
               </button>
-              <div className="pointer-events-none absolute -top-9 left-1/2 -translate-x-1/2 rounded bg-white text-slate-900 text-[10px] px-2 py-1 whitespace-nowrap opacity-0 group-hover:opacity-100 group-hover:-translate-y-1 transition shadow dark:bg-slate-800 dark:text-slate-100 dark:shadow-lg z-[1300]">
+              <div className="pointer-events-none absolute -top-9 left-1/2 -translate-x-1/2 rounded bg-white text-slate-900 text-[10px] px-2 py-1 whitespace-nowrap opacity-0 group-hover:opacity-100 group-hover:-translate-y-1 transition shadow dark:bg-slate-800 dark:text-slate-100 dark:shadow-lg z-[1200]">
                 {t.downloadTooltip}
               </div>
             </div>
