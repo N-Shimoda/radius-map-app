@@ -22,6 +22,7 @@ type SidebarProps = {
   center: LatLng;
   sidebarLocationName: string;
   centerPinColor: string;
+  isSidebarPlaceholderLabel: boolean;
   isCircleVisible: boolean;
   onToggleCircleVisibility: () => void;
   onSaveLocation: () => void;
@@ -59,6 +60,7 @@ export function Sidebar({
   center,
   sidebarLocationName,
   centerPinColor,
+  isSidebarPlaceholderLabel,
   isCircleVisible,
   onToggleCircleVisibility,
   onSaveLocation,
@@ -169,6 +171,7 @@ export function Sidebar({
               lng={center.lng}
               color={centerPinColor}
               colorLabel={t.circleColorLabel}
+              labelVariant={isSidebarPlaceholderLabel ? "placeholder" : "default"}
               actionSlot={
                 <button
                   type="button"

@@ -527,8 +527,8 @@ export default function App() {
     : formatPopupLabel(pinLabelOverride);
   const popupLabel = computedLocationLabel ?? t.mapPopupTitle;
   const centerPinColor = selectedLocation?.color ?? CLICKED_CIRCLE_COLOR;
-  const sidebarFallbackLabel = `${center.lat.toFixed(2)}, ${center.lng.toFixed(2)}`;
-  const sidebarLocationName = computedLocationLabel ?? sidebarFallbackLabel;
+  const isSidebarPlaceholderLabel = !computedLocationLabel;
+  const sidebarLocationName = computedLocationLabel ?? t.selectedLocationPlaceholder;
   const searchStatusText = isReverseGeocoding
     ? t.reverseLookupStatus
     : reverseGeocodeError
@@ -570,6 +570,7 @@ export default function App() {
               center={center}
               sidebarLocationName={sidebarLocationName}
               centerPinColor={centerPinColor}
+              isSidebarPlaceholderLabel={isSidebarPlaceholderLabel}
               isCircleVisible={isCircleVisible}
               onToggleCircleVisibility={handleToggleCircleVisibility}
               onSaveLocation={handleSaveLocation}

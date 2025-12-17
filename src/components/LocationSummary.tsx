@@ -7,6 +7,7 @@ type LocationSummaryProps = {
   color: string;
   colorLabel: string;
   actionSlot?: ReactNode;
+  labelVariant?: "default" | "placeholder";
 };
 
 export function LocationSummary({
@@ -16,12 +17,18 @@ export function LocationSummary({
   color,
   colorLabel,
   actionSlot,
+  labelVariant = "default",
 }: LocationSummaryProps) {
+  const labelColorClass =
+    labelVariant === "placeholder"
+      ? "text-slate-400 dark:text-slate-500"
+      : "text-slate-900 dark:text-slate-100";
+
   return (
     <>
       <div className="flex items-start justify-between gap-2">
         <div>
-          <div className="font-medium text-slate-900 dark:text-slate-100">{label}</div>
+          <div className={`font-medium ${labelColorClass}`}>{label}</div>
           <div className="font-mono text-xs text-slate-500 dark:text-slate-300">
             {lat.toFixed(2)}, {lng.toFixed(2)}
           </div>

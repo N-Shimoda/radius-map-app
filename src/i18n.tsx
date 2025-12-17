@@ -41,6 +41,7 @@ export type Translation = {
   circleColorLabel: string;
   reverseLookupStatus: string;
   reverseLookupError: string;
+  selectedLocationPlaceholder: string;
 };
 
 const LINK_CLASS = "text-sky-600 hover:underline";
@@ -103,6 +104,7 @@ export const translations: Record<Language, Translation> = {
     circleColorLabel: "円の色",
     reverseLookupStatus: "地点を取得中…",
     reverseLookupError: "地点情報を取得できませんでした",
+    selectedLocationPlaceholder: "選択された地点",
   },
   en: {
     headerTitle: "Radius Visualization Map",
@@ -147,6 +149,7 @@ export const translations: Record<Language, Translation> = {
     circleColorLabel: "Circle color",
     reverseLookupStatus: "Loading location…",
     reverseLookupError: "Unable to determine a name for that point",
+    selectedLocationPlaceholder: "Selected location",
   },
 };
 
