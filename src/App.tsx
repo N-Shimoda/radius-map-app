@@ -268,7 +268,7 @@ function useDebounced<T>(value: T, delay = 400) {
 export default function App() {
   const [center, setCenter] = useState<LatLng>(DEFAULT_CENTER);
   const [unit, setUnit] = useState<"km" | "mi">("km");
-  const [radiusInput, setRadiusInput] = useState<string>("5");
+  const [radiusInput, setRadiusInput] = useState<string>("2.5");
   const [search, setSearch] = useState("");
   const [results, setResults] = useState<GeocodeResult[]>([]);
   const [isSearching, setIsSearching] = useState(false);
@@ -280,6 +280,7 @@ export default function App() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [language, setLanguage] = useState<Language>("ja");
   const [isSearchLocked, setIsSearchLocked] = useState(false);
+  const [isCircleVisible, setIsCircleVisible] = useState(true);
   const uploadInputRef = useRef<HTMLInputElement | null>(null);
   const markerRef = useRef<L.Marker | null>(null);
   const reopenPopupRef = useRef(false);
@@ -728,9 +729,30 @@ export default function App() {
                 </div>
               </div>
               <div className="pt-4 border-t border-slate-100 dark:border-slate-700 space-y-2">
-                <div className="text-xs text-slate-500 dark:text-slate-300">{t.currentLocationTitle}</div>
+                <div className="flex items-center justify-between gap-3">
+                  <div className="text-xs text-slate-500 dark:text-slate-300">{t.currentLocationTitle}</div>
+                  <span
+                    className="inline-flex h-4 w-4 rounded-full border border-slate-200 dark:border-slate-600"
+                    style={{ backgroundColor: centerPinColor }}
+                    role="img"
+                    aria-label={t.circleColorLabel}
+                  />
+                </div>
                 <div className="font-mono text-base">
                   {center.lat.toFixed(5)}, {center.lng.toFixed(5)}
+                </div>
+                <div className="flex justify-end">
+                  <button
+                    type="button"
+                    onClick={() => setIsCircleVisible((prev) => !prev)}
+                    className={`rounded-full border px-2 py-1 text-[11px] font-semibold transition ${
+                      isCircleVisible
+                        ? "border-sky-200 text-sky-700 hover:border-sky-400 dark:border-sky-500 dark:text-sky-300"
+                        : "border-slate-200 text-slate-500 hover:border-slate-400 dark:border-slate-600 dark:text-slate-300"
+                    }`}
+                  >
+                    {isCircleVisible ? t.hideCircleButton : t.showCircleButton}
+                  </button>
                 </div>
                 <button
                   onClick={handleSaveLocation}
@@ -966,15 +988,17 @@ export default function App() {
             </Marker>
             {radiusMeters > 0 && (
               <>
-                <Circle
-                  center={[center.lat, center.lng]}
-                  radius={radiusMeters}
-                  pathOptions={{
-                    color: selectedLocationColor ?? DEFAULT_CIRCLE_COLOR,
-                    fillColor: selectedLocationColor ?? DEFAULT_CIRCLE_COLOR,
-                    fillOpacity: 0.1,
-                  }}
-                />
+                {isCircleVisible && (
+                  <Circle
+                    center={[center.lat, center.lng]}
+                    radius={radiusMeters}
+                    pathOptions={{
+                      color: selectedLocationColor ?? DEFAULT_CIRCLE_COLOR,
+                      fillColor: selectedLocationColor ?? DEFAULT_CIRCLE_COLOR,
+                      fillOpacity: 0.1,
+                    }}
+                  />
+                )}
                 {savedLocations.map((location) => {
                   if (!location.visible || location.id === selectedLocationId) return null;
                   const color = location.color || DEFAULT_CIRCLE_COLOR;
