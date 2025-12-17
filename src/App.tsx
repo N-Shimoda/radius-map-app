@@ -285,6 +285,7 @@ export default function App() {
   const uploadInputRef = useRef<HTMLInputElement | null>(null);
   const markerRef = useRef<L.Marker | null>(null);
   const mapRef = useRef<L.Map | null>(null);
+  const isPopupOpenRef = useRef(false);
   const reopenPopupRef = useRef(false);
   const [radiusWarning, setRadiusWarning] = useState<string | null>(null);
   const debSearch = useDebounced(search, 400);
@@ -293,10 +294,9 @@ export default function App() {
   const radiusPattern = /^\d*(\.\d*)?$/;
   const closeMarkerPopup = useCallback((reopenAfterCenterChange = false) => {
     const marker = markerRef.current;
-    if (!marker) return;
-    const wasOpen = marker.isPopupOpen();
-    marker.closePopup();
-    if (reopenAfterCenterChange && wasOpen) {
+    const shouldReopen = reopenAfterCenterChange && isPopupOpenRef.current;
+    marker?.closePopup();
+    if (shouldReopen) {
       reopenPopupRef.current = true;
     }
   }, []);
@@ -994,7 +994,19 @@ export default function App() {
             <InvalidateSizeOnResize />
             <RecenterOn center={center} />
             <ClickSetter />
-            <Marker position={[center.lat, center.lng]} ref={markerRef} icon={getPinIcon(centerPinColor)}>
+            <Marker
+              position={[center.lat, center.lng]}
+              ref={markerRef}
+              icon={getPinIcon(centerPinColor)}
+              eventHandlers={{
+                popupopen: () => {
+                  isPopupOpenRef.current = true;
+                },
+                popupclose: () => {
+                  isPopupOpenRef.current = false;
+                },
+              }}
+            >
               <Popup autoPan={false}>
                 {popupLabel}
                 <br />
@@ -1037,7 +1049,13 @@ export default function App() {
                         position={[location.lat, location.lng]}
                         icon={getPinIcon(color)}
                         eventHandlers={{
-                          popupopen: () => focusSavedLocation(location, { keepPopupOpen: true }),
+                          popupopen: () => {
+                            isPopupOpenRef.current = true;
+                            focusSavedLocation(location, { keepPopupOpen: true });
+                          },
+                          popupclose: () => {
+                            isPopupOpenRef.current = false;
+                          },
                         }}
                       >
                         <Popup autoPan={false}>
