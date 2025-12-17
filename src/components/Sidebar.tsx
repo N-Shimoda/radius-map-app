@@ -86,7 +86,7 @@ export function Sidebar({
   const searchCardTitle = language === "ja" ? "地点検索" : "Location Search";
 
   return (
-    <aside className="relative z-[1000] text-sm text-slate-700 dark:text-slate-200 shrink-0 md:w-72 lg:w-80 flex flex-col gap-4 order-2 md:order-1 md:max-h-full md:min-h-0 overflow-y-auto overflow-x-hidden">
+    <aside className="relative z-[1000] text-sm text-slate-700 dark:text-slate-200 shrink-0 md:w-72 lg:w-80 flex flex-col gap-4 order-2 md:order-1 md:max-h-full md:min-h-0 overflow-hidden">
       <div className="border border-slate-200 dark:border-slate-700 rounded-xl p-4 bg-white dark:bg-slate-800 shadow-sm space-y-4">
         <div>
           <div className="text-sm font-semibold text-slate-900 dark:text-slate-100 mb-2">
