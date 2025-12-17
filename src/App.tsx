@@ -664,8 +664,6 @@ export default function App() {
                       <IoCloudUploadOutline className="h-5 w-5" aria-hidden="true" />
                     </button>
                     <div
-                      id="upload-tooltip"
-                      role="tooltip"
                       className="pointer-events-none absolute -top-9 left-1/2 -translate-x-1/2 rounded bg-white text-slate-900 text-[10px] px-2 py-1 whitespace-nowrap opacity-0 group-hover:opacity-100 group-hover:-translate-y-1 transition shadow dark:bg-slate-800 dark:text-slate-100 dark:shadow-lg z-[1300]"
                     >
                       {t.uploadTooltip}
@@ -682,8 +680,6 @@ export default function App() {
                       <AiOutlineDownload className="h-5 w-5" aria-hidden="true" />
                     </button>
                     <div
-                      id="download-tooltip"
-                      role="tooltip"
                       className="pointer-events-none absolute -top-9 left-1/2 -translate-x-1/2 rounded bg-white text-slate-900 text-[10px] px-2 py-1 whitespace-nowrap opacity-0 group-hover:opacity-100 group-hover:-translate-y-1 transition shadow dark:bg-slate-800 dark:text-slate-100 dark:shadow-lg z-[1300]"
                     >
                       {t.downloadTooltip}
