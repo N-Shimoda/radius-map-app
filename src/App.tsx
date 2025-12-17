@@ -507,7 +507,7 @@ export default function App() {
     <>
       {/* Ensure full-height layout for header + main, footer sits outside */}
       <div className="min-h-screen h-screen bg-slate-50 text-slate-900 dark:bg-slate-900 dark:text-slate-100 flex flex-col">
-      <header className="sticky top-0 z-[1200] bg-white/80 dark:bg-slate-900/70 backdrop-blur border-b border-slate-200 dark:border-slate-800">
+      <header className="sticky top-0 z-[1200] bg-white/50 dark:bg-slate-900/60 backdrop-blur border-b border-slate-200 dark:border-slate-800">
         <div className="w-full px-6 py-3 flex items-center gap-3 justify-between">
           <div className="flex items-center gap-3">
             <button
