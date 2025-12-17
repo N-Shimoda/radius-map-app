@@ -284,6 +284,7 @@ export default function App() {
   const [isCircleVisible, setIsCircleVisible] = useState(true);
   const uploadInputRef = useRef<HTMLInputElement | null>(null);
   const markerRef = useRef<L.Marker | null>(null);
+  const mapRef = useRef<L.Map | null>(null);
   const reopenPopupRef = useRef(false);
   const [radiusWarning, setRadiusWarning] = useState<string | null>(null);
   const debSearch = useDebounced(search, 400);
@@ -513,15 +514,27 @@ export default function App() {
     }
   };
 
+  const focusSavedLocation = useCallback(
+    (location: SavedLocation, options?: { keepPopupOpen?: boolean }) => {
+      const keepPopupOpen = options?.keepPopupOpen ?? false;
+      closeMarkerPopup(keepPopupOpen ? false : true);
+      if (!keepPopupOpen) {
+        mapRef.current?.closePopup();
+      }
+      setCenter({ lat: location.lat, lng: location.lng });
+      mapRef.current?.setView([location.lat, location.lng]);
+      setSearch(location.label);
+      setIsSearchLocked(true);
+      setSelectedLocationId(location.id);
+      setPinLabelOverride(null);
+      setResults([]);
+      setIsSearching(false);
+    },
+    [closeMarkerPopup],
+  );
+
   const handleSelectSaved = (location: SavedLocation) => {
-    closeMarkerPopup(true);
-    setCenter({ lat: location.lat, lng: location.lng });
-    setSearch(location.label);
-    setIsSearchLocked(true);
-    setSelectedLocationId(location.id);
-    setPinLabelOverride(null);
-    setResults([]);
-    setIsSearching(false);
+    focusSavedLocation(location);
   };
 
   const handleStartEditing = (location: SavedLocation) => {
@@ -971,6 +984,7 @@ export default function App() {
             zoom={13}
             className="h-full w-full"
             scrollWheelZoom
+            ref={mapRef}
           >
             <TileLayer
               attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
@@ -1008,6 +1022,10 @@ export default function App() {
                       <Circle
                         center={[location.lat, location.lng]}
                         radius={radiusMeters}
+                        bubblingMouseEvents={false}
+                        eventHandlers={{
+                          click: () => focusSavedLocation(location),
+                        }}
                         pathOptions={{
                           color,
                           fillColor: color,
@@ -1015,7 +1033,13 @@ export default function App() {
                           weight: 1.5,
                         }}
                       />
-                      <Marker position={[location.lat, location.lng]} icon={getPinIcon(color)}>
+                      <Marker
+                        position={[location.lat, location.lng]}
+                        icon={getPinIcon(color)}
+                        eventHandlers={{
+                          popupopen: () => focusSavedLocation(location, { keepPopupOpen: true }),
+                        }}
+                      >
                         <Popup>
                           {location.label ?? `Saved location ${location.id}`}
                           <br />
