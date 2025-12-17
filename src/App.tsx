@@ -659,7 +659,6 @@ export default function App() {
                       type="button"
                       onClick={handleTriggerUpload}
                       aria-label={t.uploadLocationsButton}
-                      aria-describedby="upload-tooltip"
                       className="flex h-9 w-9 items-center justify-center rounded border border-slate-200 text-slate-600 hover:border-sky-400 hover:text-sky-700 dark:border-slate-600 dark:text-slate-200 dark:hover:border-sky-500 dark:hover:text-sky-300"
                     >
                       <IoCloudUploadOutline className="h-5 w-5" aria-hidden="true" />
@@ -678,7 +677,6 @@ export default function App() {
                       onClick={handleDownloadLocations}
                       disabled={savedLocations.length === 0}
                       aria-label={t.downloadLocationsButton}
-                      aria-describedby="download-tooltip"
                       className="flex h-9 w-9 items-center justify-center rounded border border-slate-200 text-slate-600 hover:border-sky-400 hover:text-sky-700 disabled:text-slate-400 disabled:border-slate-200 dark:border-slate-600 dark:text-slate-200 dark:hover:border-sky-500 dark:hover:text-sky-300 dark:disabled:text-slate-500"
                     >
                       <AiOutlineDownload className="h-5 w-5" aria-hidden="true" />
