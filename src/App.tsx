@@ -1015,7 +1015,13 @@ export default function App() {
                           weight: 1.5,
                         }}
                       />
-                      <Marker position={[location.lat, location.lng]} icon={getPinIcon(color)} />
+                      <Marker position={[location.lat, location.lng]} icon={getPinIcon(color)}>
+                        <Popup>
+                          {location.label ?? `Saved location ${location.id}`}
+                          <br />
+                          {location.lat.toFixed(6)}, {location.lng.toFixed(6)}
+                        </Popup>
+                      </Marker>
                     </React.Fragment>
                   );
                 })}
