@@ -995,7 +995,7 @@ export default function App() {
             <RecenterOn center={center} />
             <ClickSetter />
             <Marker position={[center.lat, center.lng]} ref={markerRef} icon={getPinIcon(centerPinColor)}>
-              <Popup>
+              <Popup autoPan={false}>
                 {popupLabel}
                 <br />
                 {center.lat.toFixed(2)}, {center.lng.toFixed(2)}
@@ -1040,7 +1040,7 @@ export default function App() {
                           popupopen: () => focusSavedLocation(location, { keepPopupOpen: true }),
                         }}
                       >
-                        <Popup>
+                        <Popup autoPan={false}>
                           {location.label ?? `Saved location ${location.id}`}
                           <br />
                           {location.lat.toFixed(2)}, {location.lng.toFixed(2)}
