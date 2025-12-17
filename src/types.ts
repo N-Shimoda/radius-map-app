@@ -13,6 +13,7 @@ export type GeocodeResult = {
 export type SavedLocation = LatLng & {
   id: string;
   label: string;
+  fullAddress?: string | null;
   visible: boolean;
   color: string;
 };

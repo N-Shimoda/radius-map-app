@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 
 type LocationSummaryProps = {
   label: string;
+  fullAddress?: string | null;
   lat: number;
   lng: number;
   color: string;
@@ -12,6 +13,7 @@ type LocationSummaryProps = {
 
 export function LocationSummary({
   label,
+  fullAddress,
   lat,
   lng,
   color,
@@ -29,8 +31,16 @@ export function LocationSummary({
       <div className="flex items-start justify-between gap-2">
         <div>
           <div className={`font-medium ${labelColorClass}`}>{label}</div>
+          {fullAddress ? (
+            <div
+              className="text-xs text-slate-600 dark:text-slate-300 line-clamp-2"
+              title={fullAddress}
+            >
+              {fullAddress}
+            </div>
+          ) : null}
           <div className="font-mono text-xs text-slate-500 dark:text-slate-300">
-            {lat.toFixed(2)}, {lng.toFixed(2)}
+            {lat.toFixed(6)}, {lng.toFixed(6)}
           </div>
         </div>
         <span

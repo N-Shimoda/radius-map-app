@@ -21,6 +21,7 @@ type SidebarProps = {
   onUnitChange: (value: "km" | "mi") => void;
   center: LatLng;
   sidebarLocationName: string;
+  sidebarDetailedAddress?: string | null;
   centerPinColor: string;
   isSidebarPlaceholderLabel: boolean;
   isCircleVisible: boolean;
@@ -59,6 +60,7 @@ export function Sidebar({
   onUnitChange,
   center,
   sidebarLocationName,
+  sidebarDetailedAddress,
   centerPinColor,
   isSidebarPlaceholderLabel,
   isCircleVisible,
@@ -171,6 +173,7 @@ export function Sidebar({
               lng={center.lng}
               color={centerPinColor}
               colorLabel={t.circleColorLabel}
+              fullAddress={sidebarDetailedAddress}
               labelVariant={isSidebarPlaceholderLabel ? "placeholder" : "default"}
               actionSlot={
                 <button
@@ -337,6 +340,7 @@ export function Sidebar({
                       >
                         <LocationSummary
                           label={location.label}
+                          fullAddress={location.fullAddress}
                           lat={location.lat}
                           lng={location.lng}
                           color={locationColor}

@@ -24,6 +24,7 @@ L.Icon.Default.mergeOptions({
 interface UploadedLocationItem {
   id?: string | number | null;
   label?: string | number | null;
+  fullAddress?: string | number | null;
   lat: string | number;
   lng: string | number;
   visible?: boolean;
@@ -273,6 +274,12 @@ export default function App() {
               .map((item, index) => ({
                 id: typeof item.id === "string" ? item.id : generateId(),
                 label: typeof item.label === "string" ? item.label : "",
+                fullAddress:
+                  typeof item.fullAddress === "string"
+                    ? item.fullAddress
+                    : typeof item.label === "string"
+                      ? item.label
+                      : null,
                 lat: Number(item.lat),
                 lng: Number(item.lng),
                 visible: typeof item.visible === "boolean" ? item.visible : true,
@@ -299,11 +306,13 @@ export default function App() {
     const rawLabel = search.trim();
     const fallbackLabel = t.formatDefaultSavedLabel(center.lat, center.lng);
     const label = rawLabel ? formatLocationLabel(rawLabel) ?? rawLabel : fallbackLabel;
+    const detailedAddress = pinLabelOverride ?? (rawLabel || null);
     setSavedLocations((prev) => [
       ...prev,
       {
         id: generateId(),
         label,
+        fullAddress: detailedAddress,
         lat: center.lat,
         lng: center.lng,
         visible: true,
@@ -324,9 +333,10 @@ export default function App() {
   const handleDownloadLocations = () => {
     if (savedLocations.length === 0 || typeof window === "undefined") return;
     const payload = JSON.stringify(
-      savedLocations.map(({ id, label, lat, lng, visible, color }) => ({
+      savedLocations.map(({ id, label, fullAddress, lat, lng, visible, color }) => ({
         id,
         label,
+        fullAddress,
         lat,
         lng,
         visible,
@@ -370,7 +380,8 @@ export default function App() {
           const lng = Number(item.lng);
           if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
           const rawLabel = typeof item.label === "string" ? item.label : "";
-          const label = rawLabel.trim() || t.formatDefaultSavedLabel(lat, lng);
+          const trimmedLabel = rawLabel.trim();
+          const label = trimmedLabel || t.formatDefaultSavedLabel(lat, lng);
           const id = typeof item.id === "string" ? item.id : generateId();
           const visible =
             typeof item.visible === "boolean" ? item.visible : true;
@@ -378,7 +389,14 @@ export default function App() {
             typeof item.color === "string" && item.color.trim()
               ? item.color
               : getPaletteColor(index);
-          return { id, label, lat, lng, visible, color };
+          const uploadedAddress =
+            typeof item.fullAddress === "string"
+              ? item.fullAddress.trim()
+              : typeof item.fullAddress === "number"
+                ? String(item.fullAddress).trim()
+                : "";
+          const fullAddress = uploadedAddress || trimmedLabel || null;
+          return { id, label, fullAddress, lat, lng, visible, color };
         })
         .filter((entry): entry is SavedLocation => Boolean(entry));
       if (normalized.length === 0) {
@@ -528,6 +546,7 @@ export default function App() {
     ? formatLocationLabel(selectedLocation.label)
     : formatLocationLabel(pinLabelOverride);
   const popupLabel = computedLocationLabel ?? t.mapPopupTitle;
+  const sidebarDetailedAddress = selectedLocation?.fullAddress ?? pinLabelOverride ?? null;
   const centerPinColor = selectedLocation?.color ?? CLICKED_CIRCLE_COLOR;
   const isSidebarPlaceholderLabel = !computedLocationLabel;
   const sidebarLocationName = computedLocationLabel ?? t.selectedLocationPlaceholder;
@@ -571,6 +590,7 @@ export default function App() {
               onUnitChange={handleUnitChange}
               center={center}
               sidebarLocationName={sidebarLocationName}
+              sidebarDetailedAddress={sidebarDetailedAddress}
               centerPinColor={centerPinColor}
               isSidebarPlaceholderLabel={isSidebarPlaceholderLabel}
               isCircleVisible={isCircleVisible}
