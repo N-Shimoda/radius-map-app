@@ -1,7 +1,10 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { MapContainer, TileLayer, Marker, Popup, Circle, useMap } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
+import { IoCloudUploadOutline } from "react-icons/io5";
+import { AiOutlineDownload } from "react-icons/ai";
+import { HiOutlineMenu } from "react-icons/hi";
 
 // --- Fix Leaflet's default marker icons in bundlers ---
 delete (L.Icon.Default as any).prototype._getIconUrl;
@@ -54,14 +57,13 @@ type Translation = {
   searchStatusSearching: string;
   formatResultsCount: (count: number) => string;
   currentLocationTitle: string;
-  radiusTerm: string;
   centerCoordinatesTerm: string;
-  mapClickHint: string;
   saveCurrentButton: string;
   alreadySavedButton: string;
   savedLocationsTitle: string;
   downloadLocationsButton: string;
   uploadLocationsButton: string;
+  uploadTooltip: string;
   noSavedLocations: string;
   editLabelHeading: string;
   saveLabelButton: string;
@@ -73,11 +75,12 @@ type Translation = {
   confirmDelete: string;
   formatDefaultSavedLabel: (lat: number, lng: number) => string;
   languageButtonLabel: string;
+  downloadTooltip: string;
 };
 
 const languageDisplayNames: Record<Language, string> = {
-  en: "English",
   ja: "日本語",
+  en: "English",
 };
 
 const LINK_CLASS = "text-sky-600 hover:underline";
@@ -97,45 +100,6 @@ const OSM_LINK = (
 );
 
 const translations: Record<Language, Translation> = {
-  en: {
-    headerTitle: "Radius Visualization Map",
-    headerDescription: "Visualize circles from any map point and search by postal code or place.",
-    toggleSidebarShow: "Show sidebar",
-    toggleSidebarHide: "Hide sidebar",
-    radiusLabel: "Radius",
-    radiusInvalidMessage: "Radius must contain digits only.",
-    unitLabel: "Unit",
-    unitKmOption: "km",
-    unitMiOption: "mile",
-    searchLabel: "Place search (postal code, facility, etc.)",
-    searchPlaceholder: "e.g., 606-8501 / Kyoto University Yoshida Campus / Tokyo Station",
-    searchStatusSearching: "Searching...",
-    formatResultsCount: (count: number) => `${count} results`,
-    currentLocationTitle: "Current Location",
-    radiusTerm: "Radius",
-    centerCoordinatesTerm: "Center coordinates",
-    mapClickHint: "Click the map to change the center point.",
-    saveCurrentButton: "Save this location",
-    alreadySavedButton: "Location saved",
-    savedLocationsTitle: "Saved Locations",
-    downloadLocationsButton: "Download",
-    uploadLocationsButton: "Upload",
-    noSavedLocations: "No locations saved yet.",
-    editLabelHeading: "Edit label",
-    saveLabelButton: "Save",
-    cancelButton: "Cancel",
-    editLabelButton: "Edit label",
-    deleteSavedLabel: (label: string) => `Delete ${label}`,
-    mapPopupTitle: "Center",
-    footerNote: (
-      <>
-        * Search uses {NOMINATIM_LINK} ({OSM_LINK}). Review the usage policy for high-frequency or commercial use.
-      </>
-    ),
-    confirmDelete: "Delete this location?",
-    formatDefaultSavedLabel: (lat: number, lng: number) => `Point ${lat.toFixed(4)}, ${lng.toFixed(4)}`,
-    languageButtonLabel: "Language",
-  },
   ja: {
     headerTitle: "半径可視化マップ",
     headerDescription: "地図上の地点から半径を図示。郵便番号や施設名で検索できます。",
@@ -151,14 +115,13 @@ const translations: Record<Language, Translation> = {
     searchStatusSearching: "検索中…",
     formatResultsCount: (count: number) => `${count}件`,
     currentLocationTitle: "現在の地点",
-    radiusTerm: "半径",
     centerCoordinatesTerm: "中心座標",
-    mapClickHint: "地図をクリックして中心点を変更できます。",
     saveCurrentButton: "この地点を保存",
     alreadySavedButton: "保存済みの地点",
     savedLocationsTitle: "保存した地点",
     downloadLocationsButton: "ダウンロード",
     uploadLocationsButton: "アップロード",
+    uploadTooltip: "JSONファイルをアップロード",
     noSavedLocations: "まだ保存された地点はありません。",
     editLabelHeading: "ラベルを編集",
     saveLabelButton: "保存",
@@ -174,6 +137,46 @@ const translations: Record<Language, Translation> = {
     confirmDelete: "この地点を削除しますか？",
     formatDefaultSavedLabel: (lat: number, lng: number) => `地点 ${lat.toFixed(4)}, ${lng.toFixed(4)}`,
     languageButtonLabel: "表示言語",
+    downloadTooltip: "保存した地点をダウンロード",
+  },
+  en: {
+    headerTitle: "Radius Visualization Map",
+    headerDescription: "Visualize circles from any map point and search by postal code or place.",
+    toggleSidebarShow: "Show sidebar",
+    toggleSidebarHide: "Hide sidebar",
+    radiusLabel: "Radius",
+    radiusInvalidMessage: "Radius must contain digits only.",
+    unitLabel: "Unit",
+    unitKmOption: "km",
+    unitMiOption: "mile",
+    searchLabel: "Place search (postal code, facility, etc.)",
+    searchPlaceholder: "e.g., 606-8501 / Kyoto University Yoshida Campus / Tokyo Station",
+    searchStatusSearching: "Searching...",
+    formatResultsCount: (count: number) => `${count} results`,
+    currentLocationTitle: "Current Location",
+    centerCoordinatesTerm: "Center coordinates",
+    saveCurrentButton: "Save this location",
+    alreadySavedButton: "Location saved",
+    savedLocationsTitle: "Saved Locations",
+    downloadLocationsButton: "Download",
+    uploadLocationsButton: "Upload",
+    uploadTooltip: "Upload JSON files.",
+    noSavedLocations: "No locations saved yet.",
+    editLabelHeading: "Edit label",
+    saveLabelButton: "Save",
+    cancelButton: "Cancel",
+    editLabelButton: "Edit label",
+    deleteSavedLabel: (label: string) => `Delete ${label}`,
+    mapPopupTitle: "Center",
+    footerNote: (
+      <>
+        * Search uses {NOMINATIM_LINK} ({OSM_LINK}). Review the usage policy for high-frequency or commercial use.
+      </>
+    ),
+    confirmDelete: "Delete this location?",
+    formatDefaultSavedLabel: (lat: number, lng: number) => `Point ${lat.toFixed(4)}, ${lng.toFixed(4)}`,
+    languageButtonLabel: "Language",
+    downloadTooltip: "Download saved locations.",
   },
 };
 
@@ -198,12 +201,22 @@ function InvalidateSizeOnResize() {
   useEffect(() => {
     const invalidate = () => map.invalidateSize();
     map.whenReady(() => {
-      // Recalculate right after the initial layout settles
       requestAnimationFrame(invalidate);
       setTimeout(invalidate, 0);
     });
     window.addEventListener("resize", invalidate);
-    return () => window.removeEventListener("resize", invalidate);
+
+    const container = map.getContainer();
+    const observer =
+      typeof ResizeObserver !== "undefined"
+        ? new ResizeObserver(() => requestAnimationFrame(invalidate))
+        : null;
+    observer?.observe(container);
+
+    return () => {
+      window.removeEventListener("resize", invalidate);
+      observer?.disconnect();
+    };
   }, [map]);
   return null;
 }
@@ -226,17 +239,29 @@ export default function App() {
   const [isSearching, setIsSearching] = useState(false);
   const [savedLocations, setSavedLocations] = useState<SavedLocation[]>([]);
   const [selectedLocationId, setSelectedLocationId] = useState<string | null>(null);
+  const [pinLabelOverride, setPinLabelOverride] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingLabel, setEditingLabel] = useState("");
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [language, setLanguage] = useState<Language>("ja");
   const [isSearchLocked, setIsSearchLocked] = useState(false);
   const uploadInputRef = useRef<HTMLInputElement | null>(null);
+  const markerRef = useRef<L.Marker | null>(null);
+  const reopenPopupRef = useRef(false);
   const [radiusWarning, setRadiusWarning] = useState<string | null>(null);
   const debSearch = useDebounced(search, 400);
   const t = translations[language];
-  const languageOptions: Language[] = ["en", "ja"];
+  const languageOptions: Language[] = ["ja", "en"];
   const radiusPattern = /^\d*(\.\d*)?$/;
+  const closeMarkerPopup = useCallback((reopenAfterCenterChange = false) => {
+    const marker = markerRef.current;
+    if (!marker) return;
+    const wasOpen = marker.isPopupOpen();
+    marker.closePopup();
+    if (reopenAfterCenterChange && wasOpen) {
+      reopenPopupRef.current = true;
+    }
+  }, []);
 
   const radiusMeters = useMemo(() => {
     const r = Number(radiusInput);
@@ -286,20 +311,26 @@ export default function App() {
     const map = useMap();
     useEffect(() => {
       function onClick(e: any) {
+        closeMarkerPopup();
         setCenter({ lat: e.latlng.lat, lng: e.latlng.lng });
+        setSelectedLocationId(null);
+        setPinLabelOverride(null);
       }
       map.on("click", onClick);
       return () => {
         map.off("click", onClick);
       };
-    }, [map]);
+    }, [map, closeMarkerPopup]);
     return null;
   }
 
   const handleSelectPlace = (g: GeocodeResult) => {
+    closeMarkerPopup(true);
     setCenter({ lat: parseFloat(g.lat), lng: parseFloat(g.lon) });
     setSearch(g.display_name);
     setIsSearchLocked(true);
+    setSelectedLocationId(null);
+    setPinLabelOverride(g.display_name);
     setResults([]);
   };
 
@@ -410,6 +441,8 @@ export default function App() {
       }
       setSavedLocations(normalized);
       setSelectedLocationId(normalized[0].id);
+      setPinLabelOverride(null);
+      closeMarkerPopup(true);
       setCenter({ lat: normalized[0].lat, lng: normalized[0].lng });
     } catch (err) {
       if (typeof window !== "undefined" && window.alert) {
@@ -419,10 +452,12 @@ export default function App() {
   };
 
   const handleSelectSaved = (location: SavedLocation) => {
+    closeMarkerPopup(true);
     setCenter({ lat: location.lat, lng: location.lng });
     setSearch(location.label);
     setIsSearchLocked(true);
     setSelectedLocationId(location.id);
+    setPinLabelOverride(null);
     setResults([]);
     setIsSearching(false);
   };
@@ -466,11 +501,33 @@ export default function App() {
     (loc) => Math.abs(loc.lat - center.lat) < 1e-6 && Math.abs(loc.lng - center.lng) < 1e-6,
   );
 
+  const selectedLocation = selectedLocationId
+    ? savedLocations.find((loc) => loc.id === selectedLocationId)
+    : null;
+
+  useEffect(() => {
+    if (reopenPopupRef.current && markerRef.current) {
+      markerRef.current.openPopup();
+      reopenPopupRef.current = false;
+    }
+  }, [center]);
+
+  const formatPopupLabel = (label: string | null) => {
+    if (!label) return null;
+    const [head] = label.split(",");
+    const trimmed = head.trim();
+    return trimmed || label;
+  };
+
+  const popupLabel = selectedLocation
+    ? formatPopupLabel(selectedLocation.label)
+    : formatPopupLabel(pinLabelOverride) ?? t.mapPopupTitle;
+
   return (
     <>
       {/* Ensure full-height layout for header + main, footer sits outside */}
       <div className="min-h-screen h-screen bg-slate-50 text-slate-900 dark:bg-slate-900 dark:text-slate-100 flex flex-col">
-      <header className="sticky top-0 z-[1000] bg-white/80 dark:bg-slate-900/70 backdrop-blur border-b border-slate-200 dark:border-slate-800">
+      <header className="sticky top-0 z-[1200] bg-white/50 dark:bg-slate-900/60 backdrop-blur border-b border-slate-200 dark:border-slate-800">
         <div className="w-full px-6 py-3 flex items-center gap-3 justify-between">
           <div className="flex items-center gap-3">
             <button
@@ -480,20 +537,7 @@ export default function App() {
               aria-pressed={isSidebarOpen}
               aria-label={isSidebarOpen ? t.toggleSidebarHide : t.toggleSidebarShow}
             >
-              <svg
-                className="h-5 w-5"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                aria-hidden="true"
-              >
-                <line x1="4" y1="6" x2="20" y2="6" />
-                <line x1="4" y1="12" x2="20" y2="12" />
-                <line x1="4" y1="18" x2="20" y2="18" />
-              </svg>
+              <HiOutlineMenu className="h-5 w-5" aria-hidden="true" />
             </button>
             <div>
               <h1 className="text-2xl font-semibold">{t.headerTitle}</h1>
@@ -537,34 +581,6 @@ export default function App() {
         {isSidebarOpen && (
           <aside className="text-sm text-slate-700 dark:text-slate-200 shrink-0 md:w-72 lg:w-80 space-y-4 order-2 md:order-1">
             <div className="border border-slate-200 dark:border-slate-700 rounded-xl p-4 bg-white dark:bg-slate-800 shadow-sm space-y-4">
-              <div className="flex gap-3">
-                <div className="flex flex-col gap-2 flex-1">
-                  <label className="text-xs text-slate-600 dark:text-slate-300">{t.radiusLabel}</label>
-                  <input
-                    type="number"
-                    step="0.1"
-                    min={0}
-                    value={radiusInput}
-                    onChange={(e) => handleRadiusInputChange(e.target.value)}
-                    className={`h-10 rounded-xl border px-3 bg-white text-slate-900 dark:bg-slate-900/50 dark:text-slate-100 focus:outline-none focus:ring-2 ${
-                      radiusWarning
-                        ? "border-rose-400 focus:ring-rose-300"
-                        : "border-slate-300 focus:ring-sky-400 dark:border-slate-600"
-                    }`}
-                  />
-                </div>
-                <div className="flex flex-col gap-2 flex-1">
-                  <label className="text-xs text-slate-600 dark:text-slate-300">{t.unitLabel}</label>
-                  <select
-                    className="h-10 rounded-xl border border-slate-300 dark:border-slate-600 px-3 bg-white dark:bg-slate-900/50 dark:text-slate-100"
-                    value={unit}
-                    onChange={(e) => setUnit(e.target.value as any)}
-                  >
-                    <option value="km">{t.unitKmOption}</option>
-                    <option value="mi">{t.unitMiOption}</option>
-                  </select>
-                </div>
-              </div>
               <div>
                 <label className="text-xs text-slate-600 dark:text-slate-300">{t.searchLabel}</label>
                 <div className="relative mt-1">
@@ -603,15 +619,39 @@ export default function App() {
                   )}
                 </div>
               </div>
+              <div className="flex gap-3">
+                <div className="flex flex-col gap-2 flex-1">
+                  <label className="text-xs text-slate-600 dark:text-slate-300">{t.radiusLabel}</label>
+                  <input
+                    type="number"
+                    step="0.1"
+                    min={0}
+                    value={radiusInput}
+                    onChange={(e) => handleRadiusInputChange(e.target.value)}
+                    className={`h-10 rounded-xl border px-3 bg-white text-slate-900 dark:bg-slate-900/50 dark:text-slate-100 focus:outline-none focus:ring-2 ${
+                      radiusWarning
+                        ? "border-rose-400 focus:ring-rose-300"
+                        : "border-slate-300 focus:ring-sky-400 dark:border-slate-600"
+                    }`}
+                  />
+                </div>
+                <div className="flex flex-col gap-2 flex-1">
+                  <label className="text-xs text-slate-600 dark:text-slate-300">{t.unitLabel}</label>
+                  <select
+                    className="h-10 rounded-xl border border-slate-300 dark:border-slate-600 px-3 bg-white dark:bg-slate-900/50 dark:text-slate-100"
+                    value={unit}
+                    onChange={(e) => setUnit(e.target.value as any)}
+                  >
+                    <option value="km">{t.unitKmOption}</option>
+                    <option value="mi">{t.unitMiOption}</option>
+                  </select>
+                </div>
+              </div>
             </div>
 
             <div className="border border-slate-200 dark:border-slate-700 rounded-xl p-4 bg-white dark:bg-slate-800 shadow-sm">
               <div className="font-semibold text-slate-900 dark:text-slate-100 mb-2">{t.currentLocationTitle}</div>
               <dl className="text-xs space-y-2">
-                <div>
-                  <dt className="text-slate-500 dark:text-slate-300">{t.radiusTerm}</dt>
-                  <dd className="font-mono text-base">{metersToReadable(radiusMeters)}</dd>
-                </div>
                 <div>
                   <dt className="text-slate-500 dark:text-slate-300">{t.centerCoordinatesTerm}</dt>
                   <dd className="font-mono text-base">
@@ -619,7 +659,6 @@ export default function App() {
                   </dd>
                 </div>
               </dl>
-              <p className="text-xs text-slate-500 dark:text-slate-400 mt-3">{t.mapClickHint}</p>
               <button
                 onClick={handleSaveLocation}
                 disabled={isCurrentLocationSaved}
@@ -632,21 +671,37 @@ export default function App() {
               <div className="flex items-center justify-between gap-3 mb-2">
                 <div className="font-semibold text-slate-900 dark:text-slate-100">{t.savedLocationsTitle}</div>
                 <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={handleDownloadLocations}
-                    disabled={savedLocations.length === 0}
-                    className="text-xs font-semibold px-3 py-1.5 rounded border border-slate-200 text-slate-600 hover:border-sky-400 hover:text-sky-700 disabled:text-slate-400 disabled:border-slate-200 dark:border-slate-600 dark:text-slate-200 dark:hover:border-sky-500 dark:hover:text-sky-300 dark:disabled:text-slate-500"
-                  >
-                    {t.downloadLocationsButton}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleTriggerUpload}
-                    className="text-xs font-semibold px-3 py-1.5 rounded border border-slate-200 text-slate-600 hover:border-sky-400 hover:text-sky-700 dark:border-slate-600 dark:text-slate-200 dark:hover:border-sky-500 dark:hover:text-sky-300"
-                  >
-                    {t.uploadLocationsButton}
-                  </button>
+                  <div className="relative group z-[1200]">
+                    <button
+                      type="button"
+                      onClick={handleTriggerUpload}
+                      aria-label={t.uploadLocationsButton}
+                      className="flex h-9 w-9 items-center justify-center rounded border border-slate-200 text-slate-600 hover:border-sky-400 hover:text-sky-700 dark:border-slate-600 dark:text-slate-200 dark:hover:border-sky-500 dark:hover:text-sky-300"
+                    >
+                      <IoCloudUploadOutline className="h-5 w-5" aria-hidden="true" />
+                    </button>
+                    <div
+                      className="pointer-events-none absolute -top-9 left-1/2 -translate-x-1/2 rounded bg-white text-slate-900 text-[10px] px-2 py-1 whitespace-nowrap opacity-0 group-hover:opacity-100 group-hover:-translate-y-1 transition shadow dark:bg-slate-800 dark:text-slate-100 dark:shadow-lg z-[1300]"
+                    >
+                      {t.uploadTooltip}
+                    </div>
+                  </div>
+                  <div className="relative group z-[1200]">
+                    <button
+                      type="button"
+                      onClick={handleDownloadLocations}
+                      disabled={savedLocations.length === 0}
+                      aria-label={t.downloadLocationsButton}
+                      className="flex h-9 w-9 items-center justify-center rounded border border-slate-200 text-slate-600 hover:border-sky-400 hover:text-sky-700 disabled:text-slate-400 disabled:border-slate-200 dark:border-slate-600 dark:text-slate-200 dark:hover:border-sky-500 dark:hover:text-sky-300 dark:disabled:text-slate-500"
+                    >
+                      <AiOutlineDownload className="h-5 w-5" aria-hidden="true" />
+                    </button>
+                    <div
+                      className="pointer-events-none absolute -top-9 left-1/2 -translate-x-1/2 rounded bg-white text-slate-900 text-[10px] px-2 py-1 whitespace-nowrap opacity-0 group-hover:opacity-100 group-hover:-translate-y-1 transition shadow dark:bg-slate-800 dark:text-slate-100 dark:shadow-lg z-[1300]"
+                    >
+                      {t.downloadTooltip}
+                    </div>
+                  </div>
                   <input
                     ref={uploadInputRef}
                     type="file"
@@ -783,9 +838,9 @@ export default function App() {
             <InvalidateSizeOnResize />
             <RecenterOn center={center} />
             <ClickSetter />
-            <Marker position={[center.lat, center.lng]}>
+            <Marker position={[center.lat, center.lng]} ref={markerRef}>
               <Popup>
-                {t.mapPopupTitle}
+                {popupLabel}
                 <br />
                 {center.lat.toFixed(6)}, {center.lng.toFixed(6)}
               </Popup>
