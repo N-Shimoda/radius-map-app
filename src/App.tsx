@@ -137,8 +137,16 @@ export default function App() {
   }, []);
 
   const handleToggleCircleVisibility = useCallback(() => {
+    if (selectedLocationId) {
+      setSavedLocations((prev) =>
+        prev.map((loc) =>
+          loc.id === selectedLocationId ? { ...loc, visible: !loc.visible } : loc,
+        ),
+      );
+      return;
+    }
     setIsCircleVisible((prev) => !prev);
-  }, []);
+  }, [selectedLocationId]);
 
   const handleUnitChange = useCallback((value: "km" | "mi") => {
     setUnit(value);
@@ -373,32 +381,31 @@ export default function App() {
       const text = await file.text();
       const parsed = JSON.parse(text);
       if (!Array.isArray(parsed)) throw new Error("Invalid format");
-      const normalized: SavedLocation[] = parsed
-        .map((item, index) => {
-          if (!isValidUploadedItem(item)) return null;
-          const lat = Number(item.lat);
-          const lng = Number(item.lng);
-          if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
-          const rawLabel = typeof item.label === "string" ? item.label : "";
-          const trimmedLabel = rawLabel.trim();
-          const label = trimmedLabel || t.formatDefaultSavedLabel(lat, lng);
-          const id = typeof item.id === "string" ? item.id : generateId();
-          const visible =
-            typeof item.visible === "boolean" ? item.visible : true;
-          const color =
-            typeof item.color === "string" && item.color.trim()
-              ? item.color
-              : getPaletteColor(index);
-          const uploadedAddress =
-            typeof item.fullAddress === "string"
-              ? item.fullAddress.trim()
-              : typeof item.fullAddress === "number"
-                ? String(item.fullAddress).trim()
-                : "";
-          const fullAddress = uploadedAddress || trimmedLabel || null;
-          return { id, label, fullAddress, lat, lng, visible, color };
-        })
-        .filter((entry): entry is SavedLocation => Boolean(entry));
+      const normalized = parsed.reduce<SavedLocation[]>((acc, item, index) => {
+        if (!isValidUploadedItem(item)) return acc;
+        const lat = Number(item.lat);
+        const lng = Number(item.lng);
+        if (!Number.isFinite(lat) || !Number.isFinite(lng)) return acc;
+        const rawLabel = typeof item.label === "string" ? item.label : "";
+        const trimmedLabel = rawLabel.trim();
+        const label = trimmedLabel || t.formatDefaultSavedLabel(lat, lng);
+        const id = typeof item.id === "string" ? item.id : generateId();
+        const visible =
+          typeof item.visible === "boolean" ? item.visible : true;
+        const color =
+          typeof item.color === "string" && item.color.trim()
+            ? item.color
+            : getPaletteColor(index);
+        const uploadedAddress =
+          typeof item.fullAddress === "string"
+            ? item.fullAddress.trim()
+            : typeof item.fullAddress === "number"
+              ? String(item.fullAddress).trim()
+              : "";
+        const fullAddress = uploadedAddress || trimmedLabel || null;
+        acc.push({ id, label, fullAddress, lat, lng, visible, color });
+        return acc;
+      }, []);
       if (normalized.length === 0) {
         if (typeof window !== "undefined" && window.alert) {
           window.alert("No valid locations found in the file.");
@@ -518,6 +525,12 @@ export default function App() {
   const selectedLocation = selectedLocationId
     ? savedLocations.find((loc) => loc.id === selectedLocationId)
     : null;
+
+  useEffect(() => {
+    if (!selectedLocation) return;
+    setIsCircleVisible(selectedLocation.visible);
+  }, [selectedLocation?.id, selectedLocation?.visible]);
+
   const pinIconCache = useMemo(() => new Map<string, L.DivIcon>(), []);
   const getPinIcon = useCallback(
     (color: string) => {
