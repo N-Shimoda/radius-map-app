@@ -187,9 +187,9 @@ export function Sidebar({
                   aria-label={isCircleVisible ? t.hideCircleButton : t.showCircleButton}
                 >
                   {isCircleVisible ? (
-                    <AiOutlineEyeInvisible aria-hidden="true" size={18} />
-                  ) : (
                     <AiOutlineEye aria-hidden="true" size={18} />
+                  ) : (
+                    <AiOutlineEyeInvisible aria-hidden="true" size={18} />
                   )}
                 </button>
               }
@@ -283,9 +283,9 @@ export function Sidebar({
                     }
                   >
                     {location.visible ? (
-                      <AiOutlineEyeInvisible aria-hidden="true" size={18} />
-                    ) : (
                       <AiOutlineEye aria-hidden="true" size={18} />
+                    ) : (
+                      <AiOutlineEyeInvisible aria-hidden="true" size={18} />
                     )}
                     <span className="sr-only">
                       {location.visible ? t.hideCircleButton : t.showCircleButton}
