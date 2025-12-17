@@ -202,6 +202,7 @@ const CIRCLE_COLORS = [
   "#eab308",
 ];
 const DEFAULT_CIRCLE_COLOR = CIRCLE_COLORS[0];
+const CLICKED_CIRCLE_COLOR = "#6b7280";
 const getPaletteColor = (index: number) => CIRCLE_COLORS[index % CIRCLE_COLORS.length];
 
 const createColoredPinIcon = (color: string) =>
@@ -601,7 +602,7 @@ export default function App() {
   const popupLabel = selectedLocation
     ? formatPopupLabel(selectedLocation.label)
     : formatPopupLabel(pinLabelOverride) ?? t.mapPopupTitle;
-  const centerPinColor = selectedLocationColor ?? DEFAULT_CIRCLE_COLOR;
+  const centerPinColor = selectedLocationColor ?? CLICKED_CIRCLE_COLOR;
 
   return (
     <>
@@ -993,8 +994,8 @@ export default function App() {
                     center={[center.lat, center.lng]}
                     radius={radiusMeters}
                     pathOptions={{
-                      color: selectedLocationColor ?? DEFAULT_CIRCLE_COLOR,
-                      fillColor: selectedLocationColor ?? DEFAULT_CIRCLE_COLOR,
+                      color: selectedLocationColor ?? CLICKED_CIRCLE_COLOR,
+                      fillColor: selectedLocationColor ?? CLICKED_CIRCLE_COLOR,
                       fillOpacity: 0.1,
                     }}
                   />
