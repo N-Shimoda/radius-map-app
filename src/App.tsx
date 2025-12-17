@@ -74,8 +74,8 @@ type Translation = {
 };
 
 const languageDisplayNames: Record<Language, string> = {
-  en: "English",
   ja: "日本語",
+  en: "English",
 };
 
 const LINK_CLASS = "text-sky-600 hover:underline";
@@ -95,43 +95,6 @@ const OSM_LINK = (
 );
 
 const translations: Record<Language, Translation> = {
-  en: {
-    headerTitle: "Radius Visualization Map",
-    headerDescription: "Visualize circles from any map point and search by postal code or place.",
-    toggleSidebarShow: "Show sidebar",
-    toggleSidebarHide: "Hide sidebar",
-    radiusLabel: "Radius",
-    radiusInvalidMessage: "Radius must contain digits only.",
-    unitLabel: "Unit",
-    unitKmOption: "km",
-    unitMiOption: "mile",
-    searchLabel: "Place search (postal code, facility, etc.)",
-    searchPlaceholder: "e.g., 606-8501 / Kyoto University Yoshida Campus / Tokyo Station",
-    searchStatusSearching: "Searching...",
-    formatResultsCount: (count: number) => `${count} results`,
-    currentLocationTitle: "Current Location",
-    centerCoordinatesTerm: "Center coordinates",
-    saveCurrentButton: "Save this location",
-    alreadySavedButton: "Location saved",
-    savedLocationsTitle: "Saved Locations",
-    downloadLocationsButton: "Download",
-    uploadLocationsButton: "Upload",
-    noSavedLocations: "No locations saved yet.",
-    editLabelHeading: "Edit label",
-    saveLabelButton: "Save",
-    cancelButton: "Cancel",
-    editLabelButton: "Edit label",
-    deleteSavedLabel: (label: string) => `Delete ${label}`,
-    mapPopupTitle: "Center",
-    footerNote: (
-      <>
-        * Search uses {NOMINATIM_LINK} ({OSM_LINK}). Review the usage policy for high-frequency or commercial use.
-      </>
-    ),
-    confirmDelete: "Delete this location?",
-    formatDefaultSavedLabel: (lat: number, lng: number) => `Point ${lat.toFixed(4)}, ${lng.toFixed(4)}`,
-    languageButtonLabel: "Language",
-  },
   ja: {
     headerTitle: "半径可視化マップ",
     headerDescription: "地図上の地点から半径を図示。郵便番号や施設名で検索できます。",
@@ -168,6 +131,43 @@ const translations: Record<Language, Translation> = {
     confirmDelete: "この地点を削除しますか？",
     formatDefaultSavedLabel: (lat: number, lng: number) => `地点 ${lat.toFixed(4)}, ${lng.toFixed(4)}`,
     languageButtonLabel: "表示言語",
+  },
+  en: {
+    headerTitle: "Radius Visualization Map",
+    headerDescription: "Visualize circles from any map point and search by postal code or place.",
+    toggleSidebarShow: "Show sidebar",
+    toggleSidebarHide: "Hide sidebar",
+    radiusLabel: "Radius",
+    radiusInvalidMessage: "Radius must contain digits only.",
+    unitLabel: "Unit",
+    unitKmOption: "km",
+    unitMiOption: "mile",
+    searchLabel: "Place search (postal code, facility, etc.)",
+    searchPlaceholder: "e.g., 606-8501 / Kyoto University Yoshida Campus / Tokyo Station",
+    searchStatusSearching: "Searching...",
+    formatResultsCount: (count: number) => `${count} results`,
+    currentLocationTitle: "Current Location",
+    centerCoordinatesTerm: "Center coordinates",
+    saveCurrentButton: "Save this location",
+    alreadySavedButton: "Location saved",
+    savedLocationsTitle: "Saved Locations",
+    downloadLocationsButton: "Download",
+    uploadLocationsButton: "Upload",
+    noSavedLocations: "No locations saved yet.",
+    editLabelHeading: "Edit label",
+    saveLabelButton: "Save",
+    cancelButton: "Cancel",
+    editLabelButton: "Edit label",
+    deleteSavedLabel: (label: string) => `Delete ${label}`,
+    mapPopupTitle: "Center",
+    footerNote: (
+      <>
+        * Search uses {NOMINATIM_LINK} ({OSM_LINK}). Review the usage policy for high-frequency or commercial use.
+      </>
+    ),
+    confirmDelete: "Delete this location?",
+    formatDefaultSavedLabel: (lat: number, lng: number) => `Point ${lat.toFixed(4)}, ${lng.toFixed(4)}`,
+    languageButtonLabel: "Language",
   },
 };
 
@@ -241,7 +241,7 @@ export default function App() {
   const [radiusWarning, setRadiusWarning] = useState<string | null>(null);
   const debSearch = useDebounced(search, 400);
   const t = translations[language];
-  const languageOptions: Language[] = ["en", "ja"];
+  const languageOptions: Language[] = ["ja", "en"];
   const radiusPattern = /^\d*(\.\d*)?$/;
   const closeMarkerPopup = (reopenAfterCenterChange = false) => {
     const marker = markerRef.current;
