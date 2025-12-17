@@ -1,11 +1,16 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { MapContainer, TileLayer, Marker, Popup, Circle, useMap } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
-import { IoCloudUploadOutline } from "react-icons/io5";
-import { AiOutlineDownload } from "react-icons/ai";
-import { HiOutlineMenu } from "react-icons/hi";
-import { languageDisplayNames, languageOptions, translations, type Language } from "./i18n";
+import { translations, type Language } from "./i18n";
+import { AppHeader } from "./components/AppHeader";
+import Sidebar from "./components/Sidebar";
+import MapViewport from "./components/MapViewport";
+import type { GeocodeResult, LatLng, SavedLocation } from "./types";
+import {
+  CLICKED_CIRCLE_COLOR,
+  DEFAULT_CIRCLE_COLOR,
+  getPaletteColor,
+} from "./constants/mapColors";
 
 // --- Fix Leaflet's default marker icons in bundlers ---
 delete (L.Icon.Default as any).prototype._getIconUrl;
@@ -14,15 +19,6 @@ L.Icon.Default.mergeOptions({
   iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
   shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
 });
-
-type LatLng = { lat: number; lng: number };
-type GeocodeResult = {
-  display_name: string;
-  lat: string;
-  lon: string;
-  type?: string;
-};
-type SavedLocation = LatLng & { id: string; label: string; visible: boolean; color: string };
 
 // Interface for uploaded JSON location items
 interface UploadedLocationItem {
@@ -44,20 +40,6 @@ function isValidUploadedItem(item: unknown): item is UploadedLocationItem {
   );
 }
 
-const CIRCLE_COLORS = [
-  "#2563eb",
-  "#f97316",
-  "#22c55e",
-  "#d946ef",
-  "#ef4444",
-  "#14b8a6",
-  "#a855f7",
-  "#eab308",
-];
-const DEFAULT_CIRCLE_COLOR = CIRCLE_COLORS[0];
-const CLICKED_CIRCLE_COLOR = "#6b7280";
-const getPaletteColor = (index: number) => CIRCLE_COLORS[index % CIRCLE_COLORS.length];
-
 const createColoredPinIcon = (color: string) =>
   L.divIcon({
     className: "",
@@ -77,39 +59,6 @@ const generateId = () =>
     ? crypto.randomUUID()
     : `${Date.now()}-${Math.random().toString(16).slice(2)}`;
 
-function RecenterOn({ center }: { center: LatLng }) {
-  const map = useMap();
-  useEffect(() => {
-    map.setView([center.lat, center.lng]);
-  }, [center, map]);
-  return null;
-}
-
-function InvalidateSizeOnResize() {
-  const map = useMap();
-  useEffect(() => {
-    const invalidate = () => map.invalidateSize();
-    map.whenReady(() => {
-      requestAnimationFrame(invalidate);
-      setTimeout(invalidate, 0);
-    });
-    window.addEventListener("resize", invalidate);
-
-    const container = map.getContainer();
-    const observer =
-      typeof ResizeObserver !== "undefined"
-        ? new ResizeObserver(() => requestAnimationFrame(invalidate))
-        : null;
-    observer?.observe(container);
-
-    return () => {
-      window.removeEventListener("resize", invalidate);
-      observer?.disconnect();
-    };
-  }, [map]);
-  return null;
-}
-
 function useDebounced<T>(value: T, delay = 400) {
   const [deb, setDeb] = useState(value);
   useEffect(() => {
@@ -117,44 +66,6 @@ function useDebounced<T>(value: T, delay = 400) {
     return () => clearTimeout(id);
   }, [value, delay]);
   return deb;
-}
-
-type LocationSummaryProps = {
-  label: string;
-  lat: number;
-  lng: number;
-  color: string;
-  colorLabel: string;
-  actionSlot?: React.ReactNode;
-};
-
-function LocationSummary({
-  label,
-  lat,
-  lng,
-  color,
-  colorLabel,
-  actionSlot,
-}: LocationSummaryProps) {
-  return (
-    <>
-      <div className="flex items-start justify-between gap-2">
-        <div>
-          <div className="font-medium text-slate-900 dark:text-slate-100">{label}</div>
-          <div className="font-mono text-xs text-slate-500 dark:text-slate-300">
-            {lat.toFixed(2)}, {lng.toFixed(2)}
-          </div>
-        </div>
-        <span
-          className="inline-flex h-4 w-4 rounded-full border border-slate-200 dark:border-slate-700"
-          style={{ backgroundColor: color }}
-          role="img"
-          aria-label={colorLabel}
-        />
-      </div>
-      {actionSlot ? <div className="mt-2 flex justify-end">{actionSlot}</div> : null}
-    </>
-  );
 }
 
 export default function App() {
@@ -197,6 +108,36 @@ export default function App() {
     reverseLookupControllerRef.current?.abort();
     reverseLookupControllerRef.current = null;
     setIsReverseGeocoding(false);
+  }, []);
+
+  const handleSearchChange = useCallback(
+    (value: string) => {
+      cancelReverseLookup();
+      setReverseGeocodeError(null);
+      setSearch(value);
+      setIsSearchLocked(false);
+    },
+    [cancelReverseLookup],
+  );
+
+  const handleToggleSidebar = useCallback(() => {
+    setIsSidebarOpen((prev) => !prev);
+  }, []);
+
+  const handleLanguageChange = useCallback((nextLanguage: Language) => {
+    setLanguage(nextLanguage);
+  }, []);
+
+  const handleToggleCircleVisibility = useCallback(() => {
+    setIsCircleVisible((prev) => !prev);
+  }, []);
+
+  const handleUnitChange = useCallback((value: "km" | "mi") => {
+    setUnit(value);
+  }, []);
+
+  const handleEditingLabelChange = useCallback((value: string) => {
+    setEditingLabel(value);
   }, []);
 
   const radiusMeters = useMemo(() => {
@@ -242,6 +183,22 @@ export default function App() {
     [language, t],
   );
 
+  const handleMapClick = useCallback(
+    (coords: LatLng) => {
+      const { lat, lng } = coords;
+      reopenPopupRef.current = false;
+      closeMarkerPopup(false);
+      setCenter({ lat, lng });
+      setSelectedLocationId(null);
+      setPinLabelOverride(null);
+      setResults([]);
+      setIsSearching(false);
+      setIsSearchLocked(true);
+      reverseGeocodePoint(lat, lng);
+    },
+    [closeMarkerPopup, reverseGeocodePoint],
+  );
+
   // Live search with Nominatim (OpenStreetMap)
   useEffect(() => {
     if (isSearchLocked) {
@@ -278,29 +235,6 @@ export default function App() {
       canceled = true;
     };
   }, [debSearch, language, isSearchLocked]);
-
-  // Click on map to set center
-  function ClickSetter() {
-    const map = useMap();
-    useEffect(() => {
-      function onClick(e: any) {
-        reopenPopupRef.current = false;
-        closeMarkerPopup(false);
-        setCenter({ lat: e.latlng.lat, lng: e.latlng.lng });
-        setSelectedLocationId(null);
-        setPinLabelOverride(null);
-        setResults([]);
-        setIsSearching(false);
-        setIsSearchLocked(true);
-        reverseGeocodePoint(e.latlng.lat, e.latlng.lng);
-      }
-      map.on("click", onClick);
-      return () => {
-        map.off("click", onClick);
-      };
-    }, [map, closeMarkerPopup, reverseGeocodePoint]);
-    return null;
-  }
 
   const handleSelectPlace = (g: GeocodeResult) => {
     cancelReverseLookup();
@@ -489,6 +423,22 @@ export default function App() {
     [closeMarkerPopup, cancelReverseLookup],
   );
 
+  const handleCenterPopupOpen = useCallback(() => {
+    isPopupOpenRef.current = true;
+  }, []);
+
+  const handlePopupClose = useCallback(() => {
+    isPopupOpenRef.current = false;
+  }, []);
+
+  const handleSavedMarkerPopupOpen = useCallback(
+    (location: SavedLocation) => {
+      isPopupOpenRef.current = true;
+      focusSavedLocation(location, { keepPopupOpen: true });
+    },
+    [focusSavedLocation],
+  );
+
   const handleSelectSaved = (location: SavedLocation) => {
     focusSavedLocation(location);
   };
@@ -541,7 +491,6 @@ export default function App() {
   const selectedLocation = selectedLocationId
     ? savedLocations.find((loc) => loc.id === selectedLocationId)
     : null;
-  const selectedLocationColor = selectedLocation?.color ?? null;
   const pinIconCache = useMemo(() => new Map<string, L.DivIcon>(), []);
   const getPinIcon = useCallback(
     (color: string) => {
@@ -577,7 +526,7 @@ export default function App() {
     ? formatPopupLabel(selectedLocation.label)
     : formatPopupLabel(pinLabelOverride);
   const popupLabel = computedLocationLabel ?? t.mapPopupTitle;
-  const centerPinColor = selectedLocationColor ?? CLICKED_CIRCLE_COLOR;
+  const centerPinColor = selectedLocation?.color ?? CLICKED_CIRCLE_COLOR;
   const sidebarFallbackLabel = `${center.lat.toFixed(2)}, ${center.lng.toFixed(2)}`;
   const sidebarLocationName = computedLocationLabel ?? sidebarFallbackLabel;
   const searchStatusText = isReverseGeocoding
@@ -594,450 +543,73 @@ export default function App() {
     <>
       {/* Ensure full-height layout for header + main, footer sits outside */}
       <div className="min-h-screen h-screen bg-slate-50 text-slate-900 dark:bg-slate-900 dark:text-slate-100 flex flex-col">
-      <header className="sticky top-0 z-[1200] bg-white/50 dark:bg-slate-900/60 backdrop-blur border-b border-slate-200 dark:border-slate-800">
-        <div className="w-full px-6 py-3 flex items-center gap-3 justify-between">
-          <div className="flex items-center gap-3">
-            <button
-              type="button"
-              onClick={() => setIsSidebarOpen((prev) => !prev)}
-              className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-slate-300 bg-white text-slate-600 hover:border-slate-400 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-200 dark:hover:border-slate-500"
-              aria-pressed={isSidebarOpen}
-              aria-label={isSidebarOpen ? t.toggleSidebarHide : t.toggleSidebarShow}
-            >
-              <HiOutlineMenu className="h-5 w-5" aria-hidden="true" />
-            </button>
-            <div>
-              <h1 className="text-2xl font-semibold">{t.headerTitle}</h1>
-              <p className="text-sm text-slate-600 dark:text-slate-300">{t.headerDescription}</p>
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <div
-              className="inline-flex rounded-full border border-slate-300 bg-white shadow-sm overflow-hidden dark:border-slate-700 dark:bg-slate-800"
-              role="group"
-              aria-label={t.languageButtonLabel}
-            >
-              {languageOptions.map((option, index) => {
-                const isActive = language === option;
-                return (
-                  <button
-                    key={option}
-                    type="button"
-                    onClick={() => setLanguage(option)}
-                    className={`px-4 py-1.5 text-sm font-semibold transition ${
-                      isActive
-                        ? "bg-sky-600 text-white"
-                        : "text-slate-600 hover:text-slate-900 hover:bg-slate-100 dark:text-slate-300 dark:hover:text-white dark:hover:bg-slate-700"
-                    } ${index === 0 ? "rounded-l-full" : ""} ${
-                      index === languageOptions.length - 1 ? "rounded-r-full" : ""
-                    }`}
-                    aria-pressed={isActive}
-                  >
-                    {languageDisplayNames[option]}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        </div>
-      </header>
+        <AppHeader
+          isSidebarOpen={isSidebarOpen}
+          onToggleSidebar={handleToggleSidebar}
+          language={language}
+          onLanguageChange={handleLanguageChange}
+          t={t}
+        />
 
-      {/* map + sidebar layout */}
-      <main className="flex-1 min-h-0 w-full px-6 py-4 pb-4 flex flex-col gap-4 md:flex-row md:overflow-hidden">
-        {/* sidebar */}
-        {isSidebarOpen && (
-          <aside className="text-sm text-slate-700 dark:text-slate-200 shrink-0 md:w-72 lg:w-80 flex flex-col gap-4 order-2 md:order-1 md:max-h-full md:min-h-0 overflow-y-auto overflow-x-hidden">
-            <div className="border border-slate-200 dark:border-slate-700 rounded-xl p-4 bg-white dark:bg-slate-800 shadow-sm space-y-4">
-              <div>
-                <div className="text-sm font-semibold text-slate-900 dark:text-slate-100 mb-2">{language === "ja" ? "地点検索" : "Location Search"}</div>
-                <label className="text-xs text-slate-600 dark:text-slate-300">{t.searchLabel}</label>
-                <div className="relative mt-1">
-                  <input
-                    value={search}
-                    onChange={(e) => {
-                      cancelReverseLookup();
-                      setReverseGeocodeError(null);
-                      setSearch(e.target.value);
-                      setIsSearchLocked(false);
-                    }}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" && results[0]) handleSelectPlace(results[0]);
-                    }}
-                    placeholder={t.searchPlaceholder}
-                    className="h-10 w-full rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900/50 text-slate-900 dark:text-slate-100 px-3 pr-10 focus:outline-none focus:ring-2 focus:ring-sky-400"
-                  />
-                  <div className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-slate-500 dark:text-slate-300">
-                    {searchStatusText}
-                  </div>
-                  {results.length > 0 && (
-                    <div className="absolute z-[1100] mt-1 w-full rounded-xl border border-slate-200 bg-white shadow dark:border-slate-700 dark:bg-slate-800">
-                      {results.map((g, i) => (
-                        <button
-                          key={i}
-                          onClick={() => handleSelectPlace(g)}
-                          className="block w-full text-left px-3 py-2 hover:bg-slate-50 dark:hover:bg-slate-700"
-                        >
-                          <div className="text-sm line-clamp-1" title={g.display_name}>{g.display_name}</div>
-                          <div className="text-xs text-slate-500 dark:text-slate-400">{g.type}</div>
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </div>
-              <div className="flex gap-3">
-                <div className="flex flex-col gap-2 flex-1">
-                  <label className="text-xs text-slate-600 dark:text-slate-300">{t.radiusLabel}</label>
-                  <input
-                    type="number"
-                    step="0.1"
-                    min={0}
-                    value={radiusInput}
-                    onChange={(e) => handleRadiusInputChange(e.target.value)}
-                    className={`h-10 rounded-xl border px-3 bg-white text-slate-900 dark:bg-slate-900/50 dark:text-slate-100 focus:outline-none focus:ring-2 ${
-                      radiusWarning
-                        ? "border-rose-400 focus:ring-rose-300"
-                        : "border-slate-300 focus:ring-sky-400 dark:border-slate-600"
-                    }`}
-                  />
-                </div>
-                <div className="flex flex-col gap-2 flex-1">
-                  <label className="text-xs text-slate-600 dark:text-slate-300">{t.unitLabel}</label>
-                  <select
-                    className="h-10 rounded-xl border border-slate-300 dark:border-slate-600 px-3 bg-white dark:bg-slate-900/50 dark:text-slate-100"
-                    value={unit}
-                    onChange={(e) => setUnit(e.target.value as any)}
-                  >
-                    <option value="km">{t.unitKmOption}</option>
-                    <option value="mi">{t.unitMiOption}</option>
-                  </select>
-                </div>
-              </div>
-              <div className="pt-4 border-t border-slate-100 dark:border-slate-700 space-y-3">
-                <div className="text-xs text-slate-500 dark:text-slate-300">{t.currentLocationTitle}</div>
-                <div className="w-full border rounded-lg px-3 py-2 bg-white/70 dark:bg-slate-900/40 border-slate-200 dark:border-slate-600">
-                  <LocationSummary
-                    label={sidebarLocationName}
-                    lat={center.lat}
-                    lng={center.lng}
-                    color={centerPinColor}
-                    colorLabel={t.circleColorLabel}
-                    actionSlot={
-                      <button
-                        type="button"
-                        onClick={() => setIsCircleVisible((prev) => !prev)}
-                        className={`rounded-full border px-2 py-1 text-[11px] font-semibold transition ${
-                          isCircleVisible
-                            ? "border-sky-200 text-sky-700 hover:border-sky-400 dark:border-sky-500 dark:text-sky-300"
-                            : "border-slate-200 text-slate-500 hover:border-slate-400 dark:border-slate-600 dark:text-slate-300"
-                        }`}
-                      >
-                        {isCircleVisible ? t.hideCircleButton : t.showCircleButton}
-                      </button>
-                    }
-                  />
-                </div>
-                <button
-                  onClick={handleSaveLocation}
-                  disabled={isCurrentLocationSaved}
-                  className="w-full rounded-lg bg-sky-600 text-white px-4 py-2 text-sm font-semibold disabled:bg-slate-300 dark:disabled:bg-slate-600"
-                >
-                  {isCurrentLocationSaved ? t.alreadySavedButton : t.saveCurrentButton}
-                </button>
-              </div>
-            </div>
-
-            <div className="border border-slate-200 dark:border-slate-700 rounded-xl p-4 bg-white dark:bg-slate-800 shadow-sm flex-1 min-h-[240px] flex flex-col">
-              <div className="flex items-center justify-between gap-3 mb-2">
-                <div className="font-semibold text-slate-900 dark:text-slate-100">{t.savedLocationsTitle}</div>
-                <div className="flex items-center gap-2">
-                  <div className="relative group z-[1200]">
-                    <button
-                      type="button"
-                      onClick={handleTriggerUpload}
-                      aria-label={t.uploadLocationsButton}
-                      className="flex h-9 w-9 items-center justify-center rounded border border-slate-200 text-slate-600 hover:border-sky-400 hover:text-sky-700 dark:border-slate-600 dark:text-slate-200 dark:hover:border-sky-500 dark:hover:text-sky-300"
-                    >
-                      <IoCloudUploadOutline className="h-5 w-5" aria-hidden="true" />
-                    </button>
-                    <div
-                      className="pointer-events-none absolute -top-9 left-1/2 -translate-x-1/2 rounded bg-white text-slate-900 text-[10px] px-2 py-1 whitespace-nowrap opacity-0 group-hover:opacity-100 group-hover:-translate-y-1 transition shadow dark:bg-slate-800 dark:text-slate-100 dark:shadow-lg z-[1300]"
-                    >
-                      {t.uploadTooltip}
-                    </div>
-                  </div>
-                  <div className="relative group z-[1200]">
-                    <button
-                      type="button"
-                      onClick={handleDownloadLocations}
-                      disabled={savedLocations.length === 0}
-                      aria-label={t.downloadLocationsButton}
-                      className="flex h-9 w-9 items-center justify-center rounded border border-slate-200 text-slate-600 hover:border-sky-400 hover:text-sky-700 disabled:text-slate-400 disabled:border-slate-200 dark:border-slate-600 dark:text-slate-200 dark:hover:border-sky-500 dark:hover:text-sky-300 dark:disabled:text-slate-500"
-                    >
-                      <AiOutlineDownload className="h-5 w-5" aria-hidden="true" />
-                    </button>
-                    <div
-                      className="pointer-events-none absolute -top-9 left-1/2 -translate-x-1/2 rounded bg-white text-slate-900 text-[10px] px-2 py-1 whitespace-nowrap opacity-0 group-hover:opacity-100 group-hover:-translate-y-1 transition shadow dark:bg-slate-800 dark:text-slate-100 dark:shadow-lg z-[1300]"
-                    >
-                      {t.downloadTooltip}
-                    </div>
-                  </div>
-                  <input
-                    ref={uploadInputRef}
-                    type="file"
-                    accept="application/json"
-                    className="hidden"
-                    onChange={handleUploadLocations}
-                  />
-                </div>
-              </div>
-              <div className="flex-1 min-h-0">
-                {savedLocations.length === 0 ? (
-                  <div className="text-xs text-slate-500 dark:text-slate-400">{t.noSavedLocations}</div>
-                ) : (
-                  <ul className="space-y-2 h-full overflow-auto pr-1">
-                    {savedLocations.map((location) => {
-                      const isEditing = editingId === location.id;
-                      const isSelected = selectedLocationId === location.id;
-                      const locationColor = location.color || DEFAULT_CIRCLE_COLOR;
-                      const colorBadge = (
-                        <span
-                          className="inline-flex h-4 w-4 rounded-full border border-slate-200 dark:border-slate-700"
-                          style={{ backgroundColor: locationColor }}
-                          aria-hidden="true"
-                        />
-                      );
-                      const renderVisibilityButton = (stopPropagation = false) => (
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            if (stopPropagation) e.stopPropagation();
-                            handleToggleLocationVisibility(location.id);
-                          }}
-                          className={`rounded-full border px-2 py-1 text-[11px] font-semibold transition ${
-                            location.visible
-                              ? "border-sky-200 text-sky-700 hover:border-sky-400 dark:border-sky-500 dark:text-sky-300"
-                              : "border-slate-200 text-slate-500 hover:border-slate-400 dark:border-slate-600 dark:text-slate-300"
-                          }`}
-                        >
-                          {location.visible ? t.hideCircleButton : t.showCircleButton}
-                        </button>
-                      );
-                      return (
-                        <li key={location.id} className="text-xs">
-                          {isEditing ? (
-                            <div
-                              className="border rounded-lg px-3 py-2 bg-white/70 dark:bg-slate-900/40 border-slate-200 dark:border-slate-600"
-                            >
-                              <div className="flex items-center justify-between mb-1">
-                                <label className="block text-[10px] text-slate-500 dark:text-slate-400">{t.editLabelHeading}</label>
-                                {colorBadge}
-                              </div>
-                              <input
-                                value={editingLabel}
-                                onChange={(e) => setEditingLabel(e.target.value)}
-                                onKeyDown={(e) => {
-                                  if (e.key === "Enter" && editingLabel.trim()) handleCommitEditing();
-                                  if (e.key === "Escape") handleCancelEditing();
-                                }}
-                                autoFocus
-                                className="w-full rounded border border-slate-300 dark:border-slate-600 px-2 py-1 text-xs bg-white dark:bg-slate-900/50 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-400"
-                              />
-                              <div className="flex gap-2 mt-2">
-                                <button
-                                  type="button"
-                                  onClick={handleCommitEditing}
-                                  disabled={!editingLabel.trim()}
-                                  className="flex-1 rounded bg-sky-600 text-white py-1 font-semibold disabled:bg-slate-300"
-                                >
-                                  {t.saveLabelButton}
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={handleCancelEditing}
-                                  className="flex-1 rounded border border-slate-200 text-slate-600 py-1 dark:border-slate-600 dark:text-slate-200"
-                                >
-                                  {t.cancelButton}
-                                </button>
-                              </div>
-                              <div className="mt-3 flex justify-end">
-                                {renderVisibilityButton()}
-                              </div>
-                            </div>
-                          ) : (
-                              <div
-                              role="button"
-                              tabIndex={0}
-                              onClick={() => handleSelectSaved(location)}
-                              onKeyDown={(e) => {
-                                if (e.key === "Enter" || e.key === " ") {
-                                  e.preventDefault();
-                                  handleSelectSaved(location);
-                                }
-                              }}
-                              className={`w-full border rounded-lg px-3 py-2 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 ${
-                                isSelected
-                                  ? "shadow-inner ring-1 ring-sky-300 dark:ring-sky-500 bg-white/70 dark:bg-slate-900/40 border-slate-300 dark:border-slate-600"
-                                  : "border-slate-200 hover:border-sky-400 dark:border-slate-600 dark:hover:border-sky-500 bg-white/60 dark:bg-slate-900/30"
-                              }`}
-                            >
-                              <LocationSummary
-                                label={location.label}
-                                lat={location.lat}
-                                lng={location.lng}
-                                color={locationColor}
-                                colorLabel={t.circleColorLabel}
-                                actionSlot={renderVisibilityButton(true)}
-                              />
-                              {isSelected && (
-                                <div className="mt-2 flex gap-2">
-                                  <button
-                                    type="button"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      handleStartEditing(location);
-                                    }}
-                                    className="flex-1 rounded border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-600 hover:border-sky-400 hover:text-sky-700 dark:border-slate-600 dark:text-slate-200 dark:hover:border-sky-500 dark:hover:text-sky-300"
-                                  >
-                                    {t.editLabelButton}
-                                  </button>
-                                  <button
-                                    type="button"
-                                    aria-label={t.deleteSavedLabel(location.label)}
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      handleDeleteLocation(location.id);
-                                    }}
-                                    className="flex-1 flex items-center justify-center gap-1 rounded border border-rose-200 px-3 py-1.5 text-xs font-semibold text-rose-600 hover:border-rose-400 hover:text-rose-700"
-                                  >
-                                    <svg
-                                      className="h-4 w-4"
-                                      viewBox="0 0 24 24"
-                                      fill="none"
-                                      stroke="currentColor"
-                                      strokeWidth="2"
-                                      strokeLinecap="round"
-                                      strokeLinejoin="round"
-                                      aria-hidden="true"
-                                    >
-                                      <polyline points="3 6 5 6 21 6" />
-                                      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6" />
-                                      <path d="M10 11v6" />
-                                      <path d="M14 11v6" />
-                                      <path d="M15 6V4a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v2" />
-                                    </svg>
-                                  </button>
-                                </div>
-                              )}
-                            </div>
-                          )}
-                        </li>
-                      );
-                    })}
-                  </ul>
-                )}
-              </div>
-            </div>
-
-          </aside>
-        )}
-
-        {/* map area */}
-        <div className="rounded-lg overflow-hidden border border-slate-200 dark:border-slate-700 flex-1 min-h-[320px] order-1 md:order-2 bg-slate-100 dark:bg-slate-800 md:min-h-0">
-          <MapContainer
-            center={[center.lat, center.lng]}
-            zoom={13}
-            className="h-full w-full"
-            scrollWheelZoom
-            ref={mapRef}
-          >
-            <TileLayer
-              attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+        {/* map + sidebar layout */}
+        <main className="flex-1 min-h-0 w-full px-6 py-4 pb-4 flex flex-col gap-4 md:flex-row md:overflow-hidden">
+          {isSidebarOpen && (
+            <Sidebar
+              language={language}
+              t={t}
+              search={search}
+              results={results}
+              searchStatusText={searchStatusText}
+              onSearchChange={handleSearchChange}
+              onSelectResult={handleSelectPlace}
+              radiusInput={radiusInput}
+              radiusWarning={radiusWarning}
+              onRadiusChange={handleRadiusInputChange}
+              unit={unit}
+              onUnitChange={handleUnitChange}
+              center={center}
+              sidebarLocationName={sidebarLocationName}
+              centerPinColor={centerPinColor}
+              isCircleVisible={isCircleVisible}
+              onToggleCircleVisibility={handleToggleCircleVisibility}
+              onSaveLocation={handleSaveLocation}
+              isCurrentLocationSaved={isCurrentLocationSaved}
+              savedLocations={savedLocations}
+              selectedLocationId={selectedLocationId}
+              editingId={editingId}
+              editingLabel={editingLabel}
+              onEditingLabelChange={handleEditingLabelChange}
+              onStartEditing={handleStartEditing}
+              onCommitEditing={handleCommitEditing}
+              onCancelEditing={handleCancelEditing}
+              onDeleteLocation={handleDeleteLocation}
+              onToggleLocationVisibility={handleToggleLocationVisibility}
+              onSelectSaved={handleSelectSaved}
+              onTriggerUpload={handleTriggerUpload}
+              onDownload={handleDownloadLocations}
+              uploadInputRef={uploadInputRef}
+              onUploadLocations={handleUploadLocations}
             />
-            {/* Added: force size recalculation */}
-            <InvalidateSizeOnResize />
-            <RecenterOn center={center} />
-            <ClickSetter />
-            <Marker
-              position={[center.lat, center.lng]}
-              ref={markerRef}
-              icon={getPinIcon(centerPinColor)}
-              eventHandlers={{
-                popupopen: () => {
-                  isPopupOpenRef.current = true;
-                },
-                popupclose: () => {
-                  isPopupOpenRef.current = false;
-                },
-              }}
-            >
-              <Popup autoPan={false}>
-                {popupLabel}
-                <br />
-                {center.lat.toFixed(2)}, {center.lng.toFixed(2)}
-              </Popup>
-            </Marker>
-            {radiusMeters > 0 && (
-              <>
-                {isCircleVisible && (
-                  <Circle
-                    center={[center.lat, center.lng]}
-                    radius={radiusMeters}
-                    pathOptions={{
-                      color: selectedLocationColor ?? CLICKED_CIRCLE_COLOR,
-                      fillColor: selectedLocationColor ?? CLICKED_CIRCLE_COLOR,
-                      fillOpacity: 0.1,
-                    }}
-                  />
-                )}
-                {savedLocations.map((location) => {
-                  if (!location.visible) return null;
-                  const color = location.color || DEFAULT_CIRCLE_COLOR;
-                  return (
-                    <React.Fragment key={`saved-location-${location.id}`}>
-                      <Circle
-                        center={[location.lat, location.lng]}
-                        radius={radiusMeters}
-                        bubblingMouseEvents={false}
-                        eventHandlers={{
-                          click: () => focusSavedLocation(location),
-                        }}
-                        pathOptions={{
-                          color,
-                          fillColor: color,
-                          fillOpacity: 0.08,
-                          weight: 1.5,
-                        }}
-                      />
-                      <Marker
-                        position={[location.lat, location.lng]}
-                        icon={getPinIcon(color)}
-                        eventHandlers={{
-                          popupopen: () => {
-                            isPopupOpenRef.current = true;
-                            focusSavedLocation(location, { keepPopupOpen: true });
-                          },
-                          popupclose: () => {
-                            isPopupOpenRef.current = false;
-                          },
-                        }}
-                      >
-                        <Popup autoPan={false}>
-                          {location.label ?? `Saved location ${location.id}`}
-                          <br />
-                          {location.lat.toFixed(2)}, {location.lng.toFixed(2)}
-                        </Popup>
-                      </Marker>
-                    </React.Fragment>
-                  );
-                })}
-              </>
-            )}
-          </MapContainer>
-        </div>
-      </main>
+          )}
 
+          <MapViewport
+            center={center}
+            radiusMeters={radiusMeters}
+            isCircleVisible={isCircleVisible}
+            savedLocations={savedLocations}
+            centerPinColor={centerPinColor}
+            popupLabel={popupLabel}
+            focusSavedLocation={focusSavedLocation}
+            getPinIcon={getPinIcon}
+            markerRef={markerRef}
+            mapRef={mapRef}
+            onCenterPopupOpen={handleCenterPopupOpen}
+            onCenterPopupClose={handlePopupClose}
+            onSavedMarkerPopupOpen={handleSavedMarkerPopupOpen}
+            onSavedMarkerPopupClose={handlePopupClose}
+            onMapClick={handleMapClick}
+          />
+        </main>
       </div>
       <footer className="w-full p-4 text-xs text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800">
         {t.footerNote}
