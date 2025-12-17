@@ -68,6 +68,13 @@ function useDebounced<T>(value: T, delay = 400) {
   return deb;
 }
 
+const formatLocationLabel = (label: string | null | undefined) => {
+  if (!label) return null;
+  const [head] = label.split(",");
+  const trimmed = head.trim();
+  return trimmed || label;
+};
+
 export default function App() {
   const [center, setCenter] = useState<LatLng>(DEFAULT_CENTER);
   const [unit, setUnit] = useState<"km" | "mi">("km");
@@ -289,7 +296,9 @@ export default function App() {
   }, [savedLocations]);
 
   const handleSaveLocation = () => {
-    const label = search.trim() || t.formatDefaultSavedLabel(center.lat, center.lng);
+    const rawLabel = search.trim();
+    const fallbackLabel = t.formatDefaultSavedLabel(center.lat, center.lng);
+    const label = rawLabel ? formatLocationLabel(rawLabel) ?? rawLabel : fallbackLabel;
     setSavedLocations((prev) => [
       ...prev,
       {
@@ -515,16 +524,9 @@ export default function App() {
     };
   }, [cancelReverseLookup]);
 
-  const formatPopupLabel = (label: string | null) => {
-    if (!label) return null;
-    const [head] = label.split(",");
-    const trimmed = head.trim();
-    return trimmed || label;
-  };
-
   const computedLocationLabel = selectedLocation
-    ? formatPopupLabel(selectedLocation.label)
-    : formatPopupLabel(pinLabelOverride);
+    ? formatLocationLabel(selectedLocation.label)
+    : formatLocationLabel(pinLabelOverride);
   const popupLabel = computedLocationLabel ?? t.mapPopupTitle;
   const centerPinColor = selectedLocation?.color ?? CLICKED_CIRCLE_COLOR;
   const isSidebarPlaceholderLabel = !computedLocationLabel;
