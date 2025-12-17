@@ -201,7 +201,8 @@ export default function App() {
     const map = useMap();
     useEffect(() => {
       function onClick(e: any) {
-        closeMarkerPopup();
+        reopenPopupRef.current = true; // Always show popup for newly clicked location
+        closeMarkerPopup(false);
         setCenter({ lat: e.latlng.lat, lng: e.latlng.lng });
         setSelectedLocationId(null);
         setPinLabelOverride(null);
