@@ -1,6 +1,6 @@
 import type { ChangeEventHandler, RefObject } from "react";
 import { IoCloudUploadOutline } from "react-icons/io5";
-import { AiOutlineDownload } from "react-icons/ai";
+import { AiOutlineDownload, AiOutlineEye, AiOutlineEyeInvisible } from "react-icons/ai";
 import { type Language, type Translation } from "../i18n";
 import { DEFAULT_CIRCLE_COLOR } from "../constants/mapColors";
 import { type GeocodeResult, type LatLng, type SavedLocation } from "../types";
@@ -179,13 +179,18 @@ export function Sidebar({
                 <button
                   type="button"
                   onClick={onToggleCircleVisibility}
-                  className={`rounded-full border px-2 py-1 text-[11px] font-semibold transition ${
+                  className={`rounded-full border px-2 py-1 text-[11px] font-semibold transition flex items-center justify-center ${
                     isCircleVisible
                       ? "border-sky-200 text-sky-700 hover:border-sky-400 dark:border-sky-500 dark:text-sky-300"
                       : "border-slate-200 text-slate-500 hover:border-slate-400 dark:border-slate-600 dark:text-slate-300"
                   }`}
+                  aria-label={isCircleVisible ? t.hideCircleButton : t.showCircleButton}
                 >
-                  {isCircleVisible ? t.hideCircleButton : t.showCircleButton}
+                  {isCircleVisible ? (
+                    <AiOutlineEyeInvisible aria-hidden="true" size={18} />
+                  ) : (
+                    <AiOutlineEye aria-hidden="true" size={18} />
+                  )}
                 </button>
               }
             />
@@ -268,13 +273,23 @@ export function Sidebar({
                       if (stopPropagation) e.stopPropagation();
                       onToggleLocationVisibility(location.id);
                     }}
-                    className={`rounded-full border px-2 py-1 text-[11px] font-semibold transition ${
+                    className={`rounded-full border px-2 py-1 text-[11px] font-semibold transition flex items-center justify-center ${
                       location.visible
                         ? "border-sky-200 text-sky-700 hover:border-sky-400 dark:border-sky-500 dark:text-sky-300"
                         : "border-slate-200 text-slate-500 hover:border-slate-400 dark:border-slate-600 dark:text-slate-300"
                     }`}
+                    aria-label={
+                      location.visible ? t.hideCircleButton : t.showCircleButton
+                    }
                   >
-                    {location.visible ? t.hideCircleButton : t.showCircleButton}
+                    {location.visible ? (
+                      <AiOutlineEyeInvisible aria-hidden="true" size={18} />
+                    ) : (
+                      <AiOutlineEye aria-hidden="true" size={18} />
+                    )}
+                    <span className="sr-only">
+                      {location.visible ? t.hideCircleButton : t.showCircleButton}
+                    </span>
                   </button>
                 );
 
