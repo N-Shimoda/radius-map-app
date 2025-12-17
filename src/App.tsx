@@ -63,6 +63,7 @@ type Translation = {
   savedLocationsTitle: string;
   downloadLocationsButton: string;
   uploadLocationsButton: string;
+  uploadTooltip: string;
   noSavedLocations: string;
   editLabelHeading: string;
   saveLabelButton: string;
@@ -74,6 +75,7 @@ type Translation = {
   confirmDelete: string;
   formatDefaultSavedLabel: (lat: number, lng: number) => string;
   languageButtonLabel: string;
+  downloadTooltip: string;
 };
 
 const languageDisplayNames: Record<Language, string> = {
@@ -119,6 +121,7 @@ const translations: Record<Language, Translation> = {
     savedLocationsTitle: "保存した地点",
     downloadLocationsButton: "ダウンロード",
     uploadLocationsButton: "アップロード",
+    uploadTooltip: "JSONファイルをアップロード",
     noSavedLocations: "まだ保存された地点はありません。",
     editLabelHeading: "ラベルを編集",
     saveLabelButton: "保存",
@@ -134,6 +137,7 @@ const translations: Record<Language, Translation> = {
     confirmDelete: "この地点を削除しますか？",
     formatDefaultSavedLabel: (lat: number, lng: number) => `地点 ${lat.toFixed(4)}, ${lng.toFixed(4)}`,
     languageButtonLabel: "表示言語",
+    downloadTooltip: "保存した地点をダウンロード",
   },
   en: {
     headerTitle: "Radius Visualization Map",
@@ -156,6 +160,7 @@ const translations: Record<Language, Translation> = {
     savedLocationsTitle: "Saved Locations",
     downloadLocationsButton: "Download",
     uploadLocationsButton: "Upload",
+    uploadTooltip: "Upload JSON files.",
     noSavedLocations: "No locations saved yet.",
     editLabelHeading: "Edit label",
     saveLabelButton: "Save",
@@ -171,6 +176,7 @@ const translations: Record<Language, Translation> = {
     confirmDelete: "Delete this location?",
     formatDefaultSavedLabel: (lat: number, lng: number) => `Point ${lat.toFixed(4)}, ${lng.toFixed(4)}`,
     languageButtonLabel: "Language",
+    downloadTooltip: "Download saved locations.",
   },
 };
 
@@ -648,23 +654,43 @@ export default function App() {
               <div className="flex items-center justify-between gap-3 mb-2">
                 <div className="font-semibold text-slate-900 dark:text-slate-100">{t.savedLocationsTitle}</div>
                 <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={handleTriggerUpload}
-                    aria-label={t.uploadLocationsButton}
-                    className="flex h-9 w-9 items-center justify-center rounded border border-slate-200 text-slate-600 hover:border-sky-400 hover:text-sky-700 dark:border-slate-600 dark:text-slate-200 dark:hover:border-sky-500 dark:hover:text-sky-300"
-                  >
-                    <IoCloudUploadOutline className="h-5 w-5" aria-hidden="true" />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleDownloadLocations}
-                    disabled={savedLocations.length === 0}
-                    aria-label={t.downloadLocationsButton}
-                    className="flex h-9 w-9 items-center justify-center rounded border border-slate-200 text-slate-600 hover:border-sky-400 hover:text-sky-700 disabled:text-slate-400 disabled:border-slate-200 dark:border-slate-600 dark:text-slate-200 dark:hover:border-sky-500 dark:hover:text-sky-300 dark:disabled:text-slate-500"
-                  >
-                    <AiOutlineDownload className="h-5 w-5" aria-hidden="true" />
-                  </button>
+                  <div className="relative group z-[1200]">
+                    <button
+                      type="button"
+                      onClick={handleTriggerUpload}
+                      aria-label={t.uploadLocationsButton}
+                      aria-describedby="upload-tooltip"
+                      className="flex h-9 w-9 items-center justify-center rounded border border-slate-200 text-slate-600 hover:border-sky-400 hover:text-sky-700 dark:border-slate-600 dark:text-slate-200 dark:hover:border-sky-500 dark:hover:text-sky-300"
+                    >
+                      <IoCloudUploadOutline className="h-5 w-5" aria-hidden="true" />
+                    </button>
+                    <div
+                      id="upload-tooltip"
+                      role="tooltip"
+                      className="pointer-events-none absolute -top-9 left-1/2 -translate-x-1/2 rounded bg-white text-slate-900 text-[10px] px-2 py-1 whitespace-nowrap opacity-0 group-hover:opacity-100 group-hover:-translate-y-1 transition shadow dark:bg-slate-800 dark:text-slate-100 dark:shadow-lg z-[1300]"
+                    >
+                      {t.uploadTooltip}
+                    </div>
+                  </div>
+                  <div className="relative group z-[1200]">
+                    <button
+                      type="button"
+                      onClick={handleDownloadLocations}
+                      disabled={savedLocations.length === 0}
+                      aria-label={t.downloadLocationsButton}
+                      aria-describedby="download-tooltip"
+                      className="flex h-9 w-9 items-center justify-center rounded border border-slate-200 text-slate-600 hover:border-sky-400 hover:text-sky-700 disabled:text-slate-400 disabled:border-slate-200 dark:border-slate-600 dark:text-slate-200 dark:hover:border-sky-500 dark:hover:text-sky-300 dark:disabled:text-slate-500"
+                    >
+                      <AiOutlineDownload className="h-5 w-5" aria-hidden="true" />
+                    </button>
+                    <div
+                      id="download-tooltip"
+                      role="tooltip"
+                      className="pointer-events-none absolute -top-9 left-1/2 -translate-x-1/2 rounded bg-white text-slate-900 text-[10px] px-2 py-1 whitespace-nowrap opacity-0 group-hover:opacity-100 group-hover:-translate-y-1 transition shadow dark:bg-slate-800 dark:text-slate-100 dark:shadow-lg z-[1300]"
+                    >
+                      {t.downloadTooltip}
+                    </div>
+                  </div>
                   <input
                     ref={uploadInputRef}
                     type="file"
