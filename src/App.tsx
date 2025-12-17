@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { MapContainer, TileLayer, Marker, Popup, Circle, useMap } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
@@ -252,7 +252,7 @@ export default function App() {
   const t = translations[language];
   const languageOptions: Language[] = ["ja", "en"];
   const radiusPattern = /^\d*(\.\d*)?$/;
-  const closeMarkerPopup = (reopenAfterCenterChange = false) => {
+  const closeMarkerPopup = useCallback((reopenAfterCenterChange = false) => {
     const marker = markerRef.current;
     if (!marker) return;
     const wasOpen = marker.isPopupOpen();
@@ -260,7 +260,7 @@ export default function App() {
     if (reopenAfterCenterChange && wasOpen) {
       reopenPopupRef.current = true;
     }
-  };
+  }, []);
 
   const radiusMeters = useMemo(() => {
     const r = Number(radiusInput);
@@ -318,7 +318,7 @@ export default function App() {
       return () => {
         map.off("click", onClick);
       };
-    }, [map]);
+    }, [map, closeMarkerPopup]);
     return null;
   }
 
