@@ -21,7 +21,7 @@ type GeocodeResult = {
   lon: string;
   type?: string;
 };
-type SavedLocation = LatLng & { id: string; label: string };
+type SavedLocation = LatLng & { id: string; label: string; visible: boolean; color: string };
 type Language = "en" | "ja";
 
 // Interface for uploaded JSON location items
@@ -30,6 +30,8 @@ interface UploadedLocationItem {
   label?: string | number | null;
   lat: string | number;
   lng: string | number;
+  visible?: boolean;
+  color?: string | null;
 }
 
 // Type guard to validate uploaded location data
@@ -76,6 +78,9 @@ type Translation = {
   formatDefaultSavedLabel: (lat: number, lng: number) => string;
   languageButtonLabel: string;
   downloadTooltip: string;
+  showCircleButton: string;
+  hideCircleButton: string;
+  circleColorLabel: string;
 };
 
 const languageDisplayNames: Record<Language, string> = {
@@ -110,7 +115,7 @@ const translations: Record<Language, Translation> = {
     unitLabel: "単位",
     unitKmOption: "km",
     unitMiOption: "mile",
-    searchLabel: "場所検索（郵便番号・施設名など）",
+    searchLabel: "名称を入力",
     searchPlaceholder: "例：606-8501 / 京都大学 吉田キャンパス / Tokyo Station",
     searchStatusSearching: "検索中…",
     formatResultsCount: (count: number) => `${count}件`,
@@ -135,9 +140,12 @@ const translations: Record<Language, Translation> = {
       </>
     ),
     confirmDelete: "この地点を削除しますか？",
-    formatDefaultSavedLabel: (lat: number, lng: number) => `地点 ${lat.toFixed(4)}, ${lng.toFixed(4)}`,
+    formatDefaultSavedLabel: (lat: number, lng: number) => `地点 ${lat.toFixed(2)}, ${lng.toFixed(2)}`,
     languageButtonLabel: "表示言語",
     downloadTooltip: "保存した地点をダウンロード",
+    showCircleButton: "円を表示",
+    hideCircleButton: "円を非表示",
+    circleColorLabel: "円の色",
   },
   en: {
     headerTitle: "Radius Visualization Map",
@@ -174,11 +182,40 @@ const translations: Record<Language, Translation> = {
       </>
     ),
     confirmDelete: "Delete this location?",
-    formatDefaultSavedLabel: (lat: number, lng: number) => `Point ${lat.toFixed(4)}, ${lng.toFixed(4)}`,
+    formatDefaultSavedLabel: (lat: number, lng: number) => `Point ${lat.toFixed(2)}, ${lng.toFixed(2)}`,
     languageButtonLabel: "Language",
     downloadTooltip: "Download saved locations.",
+    showCircleButton: "Show circle",
+    hideCircleButton: "Hide circle",
+    circleColorLabel: "Circle color",
   },
 };
+
+const CIRCLE_COLORS = [
+  "#2563eb",
+  "#f97316",
+  "#22c55e",
+  "#d946ef",
+  "#ef4444",
+  "#14b8a6",
+  "#a855f7",
+  "#eab308",
+];
+const DEFAULT_CIRCLE_COLOR = CIRCLE_COLORS[0];
+const CLICKED_CIRCLE_COLOR = "#6b7280";
+const getPaletteColor = (index: number) => CIRCLE_COLORS[index % CIRCLE_COLORS.length];
+
+const createColoredPinIcon = (color: string) =>
+  L.divIcon({
+    className: "",
+    html: `<svg width="32" height="48" viewBox="0 0 32 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M16 1.5C8.11116 1.5 1.5 8.11116 1.5 16C1.5 27.5174 16 46.5 16 46.5C16 46.5 30.5 27.5174 30.5 16C30.5 8.11116 23.8888 1.5 16 1.5Z" fill="${color}" stroke="white" stroke-width="3"/>
+      <circle cx="16" cy="16" r="5.25" fill="white"/>
+    </svg>`,
+    iconSize: [32, 48],
+    iconAnchor: [16, 46],
+    popupAnchor: [0, -36],
+  });
 
 const DEFAULT_CENTER: LatLng = { lat: 35.681236, lng: 139.767125 }; // Tokyo Station
 const SAVED_LOCATIONS_KEY = "radius-map-app:saved-locations";
@@ -195,7 +232,6 @@ function RecenterOn({ center }: { center: LatLng }) {
   return null;
 }
 
-// Added: re-layout when the container size changes so map bounds stay correct
 function InvalidateSizeOnResize() {
   const map = useMap();
   useEffect(() => {
@@ -233,7 +269,7 @@ function useDebounced<T>(value: T, delay = 400) {
 export default function App() {
   const [center, setCenter] = useState<LatLng>(DEFAULT_CENTER);
   const [unit, setUnit] = useState<"km" | "mi">("km");
-  const [radiusInput, setRadiusInput] = useState<string>("5");
+  const [radiusInput, setRadiusInput] = useState<string>("2.5");
   const [search, setSearch] = useState("");
   const [results, setResults] = useState<GeocodeResult[]>([]);
   const [isSearching, setIsSearching] = useState(false);
@@ -245,8 +281,10 @@ export default function App() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [language, setLanguage] = useState<Language>("ja");
   const [isSearchLocked, setIsSearchLocked] = useState(false);
+  const [isCircleVisible, setIsCircleVisible] = useState(true);
   const uploadInputRef = useRef<HTMLInputElement | null>(null);
   const markerRef = useRef<L.Marker | null>(null);
+  const mapRef = useRef<L.Map | null>(null);
   const reopenPopupRef = useRef(false);
   const [radiusWarning, setRadiusWarning] = useState<string | null>(null);
   const debSearch = useDebounced(search, 400);
@@ -349,11 +387,16 @@ export default function App() {
         if (Array.isArray(parsed)) {
           setSavedLocations(
             parsed
-              .map((item) => ({
+              .map((item, index) => ({
                 id: typeof item.id === "string" ? item.id : generateId(),
                 label: typeof item.label === "string" ? item.label : "",
                 lat: Number(item.lat),
                 lng: Number(item.lng),
+                visible: typeof item.visible === "boolean" ? item.visible : true,
+                color:
+                  typeof item.color === "string" && item.color.trim()
+                    ? item.color
+                    : getPaletteColor(index),
               }))
               .filter((item) => Number.isFinite(item.lat) && Number.isFinite(item.lng)),
           );
@@ -373,7 +416,14 @@ export default function App() {
     const label = search.trim() || t.formatDefaultSavedLabel(center.lat, center.lng);
     setSavedLocations((prev) => [
       ...prev,
-      { id: generateId(), label, lat: center.lat, lng: center.lng },
+      {
+        id: generateId(),
+        label,
+        lat: center.lat,
+        lng: center.lng,
+        visible: true,
+        color: getPaletteColor(prev.length),
+      },
     ]);
   };
 
@@ -389,7 +439,14 @@ export default function App() {
   const handleDownloadLocations = () => {
     if (savedLocations.length === 0 || typeof window === "undefined") return;
     const payload = JSON.stringify(
-      savedLocations.map(({ id, label, lat, lng }) => ({ id, label, lat, lng })),
+      savedLocations.map(({ id, label, lat, lng, visible, color }) => ({
+        id,
+        label,
+        lat,
+        lng,
+        visible,
+        color,
+      })),
       null,
       2,
     );
@@ -422,7 +479,7 @@ export default function App() {
       const parsed = JSON.parse(text);
       if (!Array.isArray(parsed)) throw new Error("Invalid format");
       const normalized: SavedLocation[] = parsed
-        .map((item) => {
+        .map((item, index) => {
           if (!isValidUploadedItem(item)) return null;
           const lat = Number(item.lat);
           const lng = Number(item.lng);
@@ -430,7 +487,13 @@ export default function App() {
           const rawLabel = typeof item.label === "string" ? item.label : "";
           const label = rawLabel.trim() || t.formatDefaultSavedLabel(lat, lng);
           const id = typeof item.id === "string" ? item.id : generateId();
-          return { id, label, lat, lng };
+          const visible =
+            typeof item.visible === "boolean" ? item.visible : true;
+          const color =
+            typeof item.color === "string" && item.color.trim()
+              ? item.color
+              : getPaletteColor(index);
+          return { id, label, lat, lng, visible, color };
         })
         .filter((entry): entry is SavedLocation => Boolean(entry));
       if (normalized.length === 0) {
@@ -451,15 +514,27 @@ export default function App() {
     }
   };
 
+  const focusSavedLocation = useCallback(
+    (location: SavedLocation, options?: { keepPopupOpen?: boolean }) => {
+      const keepPopupOpen = options?.keepPopupOpen ?? false;
+      closeMarkerPopup(keepPopupOpen ? false : true);
+      if (!keepPopupOpen) {
+        mapRef.current?.closePopup();
+      }
+      setCenter({ lat: location.lat, lng: location.lng });
+      mapRef.current?.setView([location.lat, location.lng]);
+      setSearch(location.label);
+      setIsSearchLocked(true);
+      setSelectedLocationId(location.id);
+      setPinLabelOverride(null);
+      setResults([]);
+      setIsSearching(false);
+    },
+    [closeMarkerPopup],
+  );
+
   const handleSelectSaved = (location: SavedLocation) => {
-    closeMarkerPopup(true);
-    setCenter({ lat: location.lat, lng: location.lng });
-    setSearch(location.label);
-    setIsSearchLocked(true);
-    setSelectedLocationId(location.id);
-    setPinLabelOverride(null);
-    setResults([]);
-    setIsSearching(false);
+    focusSavedLocation(location);
   };
 
   const handleStartEditing = (location: SavedLocation) => {
@@ -479,6 +554,12 @@ export default function App() {
       setEditingId(null);
       setEditingLabel("");
     }
+  };
+
+  const handleToggleLocationVisibility = (id: string) => {
+    setSavedLocations((prev) =>
+      prev.map((loc) => (loc.id === id ? { ...loc, visible: !loc.visible } : loc)),
+    );
   };
 
   const handleCancelEditing = () => {
@@ -504,6 +585,18 @@ export default function App() {
   const selectedLocation = selectedLocationId
     ? savedLocations.find((loc) => loc.id === selectedLocationId)
     : null;
+  const selectedLocationColor = selectedLocation?.color ?? null;
+  const pinIconCache = useMemo(() => new Map<string, L.DivIcon>(), []);
+  const getPinIcon = useCallback(
+    (color: string) => {
+      const safeColor = color || DEFAULT_CIRCLE_COLOR;
+      if (!pinIconCache.has(safeColor)) {
+        pinIconCache.set(safeColor, createColoredPinIcon(safeColor));
+      }
+      return pinIconCache.get(safeColor)!;
+    },
+    [pinIconCache],
+  );
 
   useEffect(() => {
     if (reopenPopupRef.current && markerRef.current) {
@@ -522,6 +615,7 @@ export default function App() {
   const popupLabel = selectedLocation
     ? formatPopupLabel(selectedLocation.label)
     : formatPopupLabel(pinLabelOverride) ?? t.mapPopupTitle;
+  const centerPinColor = selectedLocationColor ?? CLICKED_CIRCLE_COLOR;
 
   return (
     <>
@@ -576,12 +670,13 @@ export default function App() {
       </header>
 
       {/* map + sidebar layout */}
-      <main className="flex-1 w-full px-6 py-4 pb-4 flex flex-col gap-4 md:flex-row">
+      <main className="flex-1 min-h-0 w-full px-6 py-4 pb-4 flex flex-col gap-4 md:flex-row md:overflow-hidden">
         {/* sidebar */}
         {isSidebarOpen && (
-          <aside className="text-sm text-slate-700 dark:text-slate-200 shrink-0 md:w-72 lg:w-80 space-y-4 order-2 md:order-1">
+          <aside className="text-sm text-slate-700 dark:text-slate-200 shrink-0 md:w-72 lg:w-80 flex flex-col gap-4 order-2 md:order-1 md:max-h-full md:min-h-0 overflow-y-auto overflow-x-hidden">
             <div className="border border-slate-200 dark:border-slate-700 rounded-xl p-4 bg-white dark:bg-slate-800 shadow-sm space-y-4">
               <div>
+                <div className="text-sm font-semibold text-slate-900 dark:text-slate-100 mb-2">{language === "ja" ? "地点検索" : "Location Search"}</div>
                 <label className="text-xs text-slate-600 dark:text-slate-300">{t.searchLabel}</label>
                 <div className="relative mt-1">
                   <input
@@ -647,27 +742,43 @@ export default function App() {
                   </select>
                 </div>
               </div>
+              <div className="pt-4 border-t border-slate-100 dark:border-slate-700 space-y-2">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="text-xs text-slate-500 dark:text-slate-300">{t.currentLocationTitle}</div>
+                  <span
+                    className="inline-flex h-4 w-4 rounded-full border border-slate-200 dark:border-slate-600"
+                    style={{ backgroundColor: centerPinColor }}
+                    role="img"
+                    aria-label={t.circleColorLabel}
+                  />
+                </div>
+                <div className="font-mono text-base">
+                  {center.lat.toFixed(2)}, {center.lng.toFixed(2)}
+                </div>
+                <div className="flex justify-end">
+                  <button
+                    type="button"
+                    onClick={() => setIsCircleVisible((prev) => !prev)}
+                    className={`rounded-full border px-2 py-1 text-[11px] font-semibold transition ${
+                      isCircleVisible
+                        ? "border-sky-200 text-sky-700 hover:border-sky-400 dark:border-sky-500 dark:text-sky-300"
+                        : "border-slate-200 text-slate-500 hover:border-slate-400 dark:border-slate-600 dark:text-slate-300"
+                    }`}
+                  >
+                    {isCircleVisible ? t.hideCircleButton : t.showCircleButton}
+                  </button>
+                </div>
+                <button
+                  onClick={handleSaveLocation}
+                  disabled={isCurrentLocationSaved}
+                  className="w-full rounded-lg bg-sky-600 text-white px-4 py-2 text-sm font-semibold disabled:bg-slate-300 dark:disabled:bg-slate-600"
+                >
+                  {isCurrentLocationSaved ? t.alreadySavedButton : t.saveCurrentButton}
+                </button>
+              </div>
             </div>
 
-            <div className="border border-slate-200 dark:border-slate-700 rounded-xl p-4 bg-white dark:bg-slate-800 shadow-sm">
-              <div className="font-semibold text-slate-900 dark:text-slate-100 mb-2">{t.currentLocationTitle}</div>
-              <dl className="text-xs space-y-2">
-                <div>
-                  <dt className="text-slate-500 dark:text-slate-300">{t.centerCoordinatesTerm}</dt>
-                  <dd className="font-mono text-base">
-                    {center.lat.toFixed(5)}, {center.lng.toFixed(5)}
-                  </dd>
-                </div>
-              </dl>
-              <button
-                onClick={handleSaveLocation}
-                disabled={isCurrentLocationSaved}
-                className="mt-4 w-full rounded-lg bg-sky-600 text-white px-4 py-2 text-sm font-semibold disabled:bg-slate-300 dark:disabled:bg-slate-600"
-              >
-                {isCurrentLocationSaved ? t.alreadySavedButton : t.saveCurrentButton}
-              </button>
-            </div>
-            <div className="border border-slate-200 dark:border-slate-700 rounded-xl p-4 bg-white dark:bg-slate-800 shadow-sm flex-1 min-h-[180px]">
+            <div className="border border-slate-200 dark:border-slate-700 rounded-xl p-4 bg-white dark:bg-slate-800 shadow-sm flex-1 min-h-[240px] flex flex-col">
               <div className="flex items-center justify-between gap-3 mb-2">
                 <div className="font-semibold text-slate-900 dark:text-slate-100">{t.savedLocationsTitle}</div>
                 <div className="flex items-center gap-2">
@@ -711,124 +822,169 @@ export default function App() {
                   />
                 </div>
               </div>
-              {savedLocations.length === 0 ? (
-                <div className="text-xs text-slate-500 dark:text-slate-400">{t.noSavedLocations}</div>
-              ) : (
-                <ul className="space-y-2 max-h-80 overflow-auto pr-1">
-                  {savedLocations.map((location) => {
-                    const isEditing = editingId === location.id;
-                    return (
-                      <li key={location.id} className="text-xs">
-                        {isEditing ? (
-                          <div className="border border-sky-400 dark:border-sky-500 rounded-lg px-3 py-2 bg-sky-50 dark:bg-slate-900/40">
-                            <label className="block text-[10px] text-slate-500 dark:text-slate-400 mb-1">{t.editLabelHeading}</label>
-                            <input
-                              value={editingLabel}
-                              onChange={(e) => setEditingLabel(e.target.value)}
-                              onKeyDown={(e) => {
-                                if (e.key === "Enter" && editingLabel.trim()) handleCommitEditing();
-                                if (e.key === "Escape") handleCancelEditing();
-                              }}
-                              autoFocus
-                              className="w-full rounded border border-slate-300 dark:border-slate-600 px-2 py-1 text-xs bg-white dark:bg-slate-900/50 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-400"
-                            />
-                            <div className="flex gap-2 mt-2">
-                              <button
-                                type="button"
-                                onClick={handleCommitEditing}
-                                disabled={!editingLabel.trim()}
-                                className="flex-1 rounded bg-sky-600 text-white py-1 font-semibold disabled:bg-slate-300"
-                              >
-                                {t.saveLabelButton}
-                              </button>
-                              <button
-                                type="button"
-                                onClick={handleCancelEditing}
-                                className="flex-1 rounded border border-slate-200 text-slate-600 py-1 dark:border-slate-600 dark:text-slate-200"
-                              >
-                                {t.cancelButton}
-                              </button>
-                            </div>
-                          </div>
-                        ) : (
-                          <div
-                            role="button"
-                            tabIndex={0}
-                            onClick={() => handleSelectSaved(location)}
-                            onKeyDown={(e) => {
-                              if (e.key === "Enter" || e.key === " ") {
-                                e.preventDefault();
-                                handleSelectSaved(location);
-                              }
-                            }}
-                            className={`w-full border rounded-lg px-3 py-2 transition ${
-                              selectedLocationId === location.id
-                                ? "border-sky-500 text-sky-700 shadow-inner dark:border-sky-400 dark:text-sky-300"
-                                : "border-slate-200 hover:border-sky-400 hover:text-sky-600 dark:border-slate-600 dark:hover:border-sky-500 dark:hover:text-sky-300"
-                            }`}
-                          >
-                            <div className="font-medium">{location.label}</div>
-                            <div className="font-mono text-slate-500 dark:text-slate-300">
-                              {location.lat.toFixed(4)}, {location.lng.toFixed(4)}
-                            </div>
-                            {selectedLocationId === location.id && (
-                              <div className="mt-2 flex gap-2">
+              <div className="flex-1 min-h-0">
+                {savedLocations.length === 0 ? (
+                  <div className="text-xs text-slate-500 dark:text-slate-400">{t.noSavedLocations}</div>
+                ) : (
+                  <ul className="space-y-2 h-full overflow-auto pr-1">
+                    {savedLocations.map((location) => {
+                      const isEditing = editingId === location.id;
+                      const isSelected = selectedLocationId === location.id;
+                      const locationColor = location.color || DEFAULT_CIRCLE_COLOR;
+                      const colorBadge = (
+                        <span
+                          className="inline-flex h-4 w-4 rounded-full border border-slate-200 dark:border-slate-700"
+                          style={{ backgroundColor: locationColor }}
+                          aria-hidden="true"
+                        />
+                      );
+                      const renderVisibilityButton = (stopPropagation = false) => (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            if (stopPropagation) e.stopPropagation();
+                            handleToggleLocationVisibility(location.id);
+                          }}
+                          className={`rounded-full border px-2 py-1 text-[11px] font-semibold transition ${
+                            location.visible
+                              ? "border-sky-200 text-sky-700 hover:border-sky-400 dark:border-sky-500 dark:text-sky-300"
+                              : "border-slate-200 text-slate-500 hover:border-slate-400 dark:border-slate-600 dark:text-slate-300"
+                          }`}
+                        >
+                          {location.visible ? t.hideCircleButton : t.showCircleButton}
+                        </button>
+                      );
+                      return (
+                        <li key={location.id} className="text-xs">
+                          {isEditing ? (
+                            <div
+                              className="border rounded-lg px-3 py-2 bg-white/70 dark:bg-slate-900/40 border-slate-200 dark:border-slate-600"
+                            >
+                              <div className="flex items-center justify-between mb-1">
+                                <label className="block text-[10px] text-slate-500 dark:text-slate-400">{t.editLabelHeading}</label>
+                                {colorBadge}
+                              </div>
+                              <input
+                                value={editingLabel}
+                                onChange={(e) => setEditingLabel(e.target.value)}
+                                onKeyDown={(e) => {
+                                  if (e.key === "Enter" && editingLabel.trim()) handleCommitEditing();
+                                  if (e.key === "Escape") handleCancelEditing();
+                                }}
+                                autoFocus
+                                className="w-full rounded border border-slate-300 dark:border-slate-600 px-2 py-1 text-xs bg-white dark:bg-slate-900/50 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-400"
+                              />
+                              <div className="flex gap-2 mt-2">
                                 <button
                                   type="button"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleStartEditing(location);
-                                  }}
-                                  className="flex-1 rounded border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-600 hover:border-sky-400 hover:text-sky-700 dark:border-slate-600 dark:text-slate-200 dark:hover:border-sky-500 dark:hover:text-sky-300"
+                                  onClick={handleCommitEditing}
+                                  disabled={!editingLabel.trim()}
+                                  className="flex-1 rounded bg-sky-600 text-white py-1 font-semibold disabled:bg-slate-300"
                                 >
-                                  {t.editLabelButton}
+                                  {t.saveLabelButton}
                                 </button>
                                 <button
                                   type="button"
-                                  aria-label={t.deleteSavedLabel(location.label)}
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleDeleteLocation(location.id);
-                                  }}
-                                  className="flex-1 flex items-center justify-center gap-1 rounded border border-rose-200 px-3 py-1.5 text-xs font-semibold text-rose-600 hover:border-rose-400 hover:text-rose-700"
+                                  onClick={handleCancelEditing}
+                                  className="flex-1 rounded border border-slate-200 text-slate-600 py-1 dark:border-slate-600 dark:text-slate-200"
                                 >
-                                  <svg
-                                    className="h-4 w-4"
-                                    viewBox="0 0 24 24"
-                                    fill="none"
-                                    stroke="currentColor"
-                                    strokeWidth="2"
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    aria-hidden="true"
-                                  >
-                                    <polyline points="3 6 5 6 21 6" />
-                                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6" />
-                                    <path d="M10 11v6" />
-                                    <path d="M14 11v6" />
-                                    <path d="M15 6V4a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v2" />
-                                  </svg>
+                                  {t.cancelButton}
                                 </button>
                               </div>
-                            )}
-                          </div>
-                        )}
-                      </li>
-                    );
-                  })}
-                </ul>
-              )}
+                              <div className="mt-3 flex justify-end">
+                                {renderVisibilityButton()}
+                              </div>
+                            </div>
+                          ) : (
+                              <div
+                              role="button"
+                              tabIndex={0}
+                              onClick={() => handleSelectSaved(location)}
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter" || e.key === " ") {
+                                  e.preventDefault();
+                                  handleSelectSaved(location);
+                                }
+                              }}
+                              className={`w-full border rounded-lg px-3 py-2 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 ${
+                                isSelected
+                                  ? "shadow-inner ring-1 ring-sky-300 dark:ring-sky-500 bg-white/70 dark:bg-slate-900/40 border-slate-300 dark:border-slate-600"
+                                  : "border-slate-200 hover:border-sky-400 dark:border-slate-600 dark:hover:border-sky-500 bg-white/60 dark:bg-slate-900/30"
+                              }`}
+                            >
+                              <div className="flex items-start justify-between gap-2">
+                                <div>
+                                  <div className="font-medium">{location.label}</div>
+                                  <div className="font-mono text-slate-500 dark:text-slate-300">
+                                    {location.lat.toFixed(2)}, {location.lng.toFixed(2)}
+                                  </div>
+                                </div>
+                                <div className="pt-0.5">{colorBadge}</div>
+                              </div>
+                              <div className="mt-2 flex justify-end">
+                                {renderVisibilityButton(true)}
+                              </div>
+                              {isSelected && (
+                                <div className="mt-2 flex gap-2">
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleStartEditing(location);
+                                    }}
+                                    className="flex-1 rounded border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-600 hover:border-sky-400 hover:text-sky-700 dark:border-slate-600 dark:text-slate-200 dark:hover:border-sky-500 dark:hover:text-sky-300"
+                                  >
+                                    {t.editLabelButton}
+                                  </button>
+                                  <button
+                                    type="button"
+                                    aria-label={t.deleteSavedLabel(location.label)}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleDeleteLocation(location.id);
+                                    }}
+                                    className="flex-1 flex items-center justify-center gap-1 rounded border border-rose-200 px-3 py-1.5 text-xs font-semibold text-rose-600 hover:border-rose-400 hover:text-rose-700"
+                                  >
+                                    <svg
+                                      className="h-4 w-4"
+                                      viewBox="0 0 24 24"
+                                      fill="none"
+                                      stroke="currentColor"
+                                      strokeWidth="2"
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                      aria-hidden="true"
+                                    >
+                                      <polyline points="3 6 5 6 21 6" />
+                                      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6" />
+                                      <path d="M10 11v6" />
+                                      <path d="M14 11v6" />
+                                      <path d="M15 6V4a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v2" />
+                                    </svg>
+                                  </button>
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </li>
+                      );
+                    })}
+                  </ul>
+                )}
+              </div>
             </div>
+
           </aside>
         )}
 
         {/* map area */}
-        <div className="rounded-lg overflow-hidden border border-slate-200 dark:border-slate-700 flex-1 min-h-[320px] order-1 md:order-2 bg-slate-100 dark:bg-slate-800">
+        <div className="rounded-lg overflow-hidden border border-slate-200 dark:border-slate-700 flex-1 min-h-[320px] order-1 md:order-2 bg-slate-100 dark:bg-slate-800 md:min-h-0">
           <MapContainer
             center={[center.lat, center.lng]}
             zoom={13}
             className="h-full w-full"
             scrollWheelZoom
+            ref={mapRef}
           >
             <TileLayer
               attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
@@ -838,15 +994,62 @@ export default function App() {
             <InvalidateSizeOnResize />
             <RecenterOn center={center} />
             <ClickSetter />
-            <Marker position={[center.lat, center.lng]} ref={markerRef}>
-              <Popup>
+            <Marker position={[center.lat, center.lng]} ref={markerRef} icon={getPinIcon(centerPinColor)}>
+              <Popup autoPan={false}>
                 {popupLabel}
                 <br />
-                {center.lat.toFixed(6)}, {center.lng.toFixed(6)}
+                {center.lat.toFixed(2)}, {center.lng.toFixed(2)}
               </Popup>
             </Marker>
             {radiusMeters > 0 && (
-              <Circle center={[center.lat, center.lng]} radius={radiusMeters} pathOptions={{ fillOpacity: 0.1 }} />
+              <>
+                {isCircleVisible && (
+                  <Circle
+                    center={[center.lat, center.lng]}
+                    radius={radiusMeters}
+                    pathOptions={{
+                      color: selectedLocationColor ?? CLICKED_CIRCLE_COLOR,
+                      fillColor: selectedLocationColor ?? CLICKED_CIRCLE_COLOR,
+                      fillOpacity: 0.1,
+                    }}
+                  />
+                )}
+                {savedLocations.map((location) => {
+                  if (!location.visible) return null;
+                  const color = location.color || DEFAULT_CIRCLE_COLOR;
+                  return (
+                    <React.Fragment key={`saved-location-${location.id}`}>
+                      <Circle
+                        center={[location.lat, location.lng]}
+                        radius={radiusMeters}
+                        bubblingMouseEvents={false}
+                        eventHandlers={{
+                          click: () => focusSavedLocation(location),
+                        }}
+                        pathOptions={{
+                          color,
+                          fillColor: color,
+                          fillOpacity: 0.08,
+                          weight: 1.5,
+                        }}
+                      />
+                      <Marker
+                        position={[location.lat, location.lng]}
+                        icon={getPinIcon(color)}
+                        eventHandlers={{
+                          popupopen: () => focusSavedLocation(location, { keepPopupOpen: true }),
+                        }}
+                      >
+                        <Popup autoPan={false}>
+                          {location.label ?? `Saved location ${location.id}`}
+                          <br />
+                          {location.lat.toFixed(2)}, {location.lng.toFixed(2)}
+                        </Popup>
+                      </Marker>
+                    </React.Fragment>
+                  );
+                })}
+              </>
             )}
           </MapContainer>
         </div>
