@@ -241,7 +241,7 @@ export default function App() {
   const [selectedLocationId, setSelectedLocationId] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingLabel, setEditingLabel] = useState("");
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [language, setLanguage] = useState<Language>("ja");
   const [isSearchLocked, setIsSearchLocked] = useState(false);
   const uploadInputRef = useRef<HTMLInputElement | null>(null);
