@@ -135,11 +135,14 @@ export default function App() {
   const [language, setLanguage] = useState<Language>("ja");
   const [isSearchLocked, setIsSearchLocked] = useState(false);
   const [isCircleVisible, setIsCircleVisible] = useState(true);
+  const [isReverseGeocoding, setIsReverseGeocoding] = useState(false);
+  const [reverseGeocodeError, setReverseGeocodeError] = useState<string | null>(null);
   const uploadInputRef = useRef<HTMLInputElement | null>(null);
   const markerRef = useRef<L.Marker | null>(null);
   const mapRef = useRef<L.Map | null>(null);
   const isPopupOpenRef = useRef(false);
   const reopenPopupRef = useRef(false);
+  const reverseLookupControllerRef = useRef<AbortController | null>(null);
   const [radiusWarning, setRadiusWarning] = useState<string | null>(null);
   const debSearch = useDebounced(search, 400);
   const t = translations[language];
@@ -152,12 +155,54 @@ export default function App() {
       reopenPopupRef.current = true;
     }
   }, []);
+  const cancelReverseLookup = useCallback(() => {
+    reverseLookupControllerRef.current?.abort();
+    reverseLookupControllerRef.current = null;
+    setIsReverseGeocoding(false);
+  }, []);
 
   const radiusMeters = useMemo(() => {
     const r = Number(radiusInput);
     if (!isFinite(r) || r < 0) return 0;
     return unit === "km" ? r * 1000 : r * 1609.344;
   }, [radiusInput, unit]);
+  const reverseGeocodePoint = useCallback(
+    async (lat: number, lng: number) => {
+      if (typeof fetch === "undefined") return;
+      reverseLookupControllerRef.current?.abort();
+      const controller = new AbortController();
+      reverseLookupControllerRef.current = controller;
+      setIsReverseGeocoding(true);
+      setReverseGeocodeError(null);
+      try {
+        const url = new URL("https://nominatim.openstreetmap.org/reverse");
+        url.searchParams.set("format", "json");
+        url.searchParams.set("lat", lat.toString());
+        url.searchParams.set("lon", lng.toString());
+        url.searchParams.set("zoom", "16");
+        url.searchParams.set("addressdetails", "0");
+        url.searchParams.set("accept-language", language);
+        const res = await fetch(url.toString(), { signal: controller.signal });
+        if (!res.ok) throw new Error("Reverse lookup failed");
+        const data = await res.json();
+        if (controller.signal.aborted) return;
+        const hasDisplayName =
+          data && typeof data.display_name === "string" && data.display_name.trim();
+        const label = hasDisplayName ? data.display_name : t.formatDefaultSavedLabel(lat, lng);
+        setSearch(label);
+        setPinLabelOverride(label);
+        setIsSearchLocked(true);
+      } catch (error) {
+        if (controller.signal.aborted) return;
+        setReverseGeocodeError(t.reverseLookupError);
+      } finally {
+        if (controller.signal.aborted) return;
+        setIsReverseGeocoding(false);
+        reverseLookupControllerRef.current = null;
+      }
+    },
+    [language, t],
+  );
 
   // Live search with Nominatim (OpenStreetMap)
   useEffect(() => {
@@ -201,21 +246,27 @@ export default function App() {
     const map = useMap();
     useEffect(() => {
       function onClick(e: any) {
-        reopenPopupRef.current = true; // Always show popup for newly clicked location
+        reopenPopupRef.current = false;
         closeMarkerPopup(false);
         setCenter({ lat: e.latlng.lat, lng: e.latlng.lng });
         setSelectedLocationId(null);
         setPinLabelOverride(null);
+        setResults([]);
+        setIsSearching(false);
+        setIsSearchLocked(true);
+        reverseGeocodePoint(e.latlng.lat, e.latlng.lng);
       }
       map.on("click", onClick);
       return () => {
         map.off("click", onClick);
       };
-    }, [map, closeMarkerPopup]);
+    }, [map, closeMarkerPopup, reverseGeocodePoint]);
     return null;
   }
 
   const handleSelectPlace = (g: GeocodeResult) => {
+    cancelReverseLookup();
+    setReverseGeocodeError(null);
     closeMarkerPopup(true);
     setCenter({ lat: parseFloat(g.lat), lng: parseFloat(g.lon) });
     setSearch(g.display_name);
@@ -372,6 +423,8 @@ export default function App() {
       location: SavedLocation,
       options?: { keepPopupOpen?: boolean; inheritPopupState?: boolean },
     ) => {
+      cancelReverseLookup();
+      setReverseGeocodeError(null);
       const keepPopupOpen = options?.keepPopupOpen ?? false;
       const inheritPopupState = options?.inheritPopupState ?? true;
       const isCenterPopupOpen = markerRef.current?.isPopupOpen() ?? false;
@@ -395,7 +448,7 @@ export default function App() {
       setResults([]);
       setIsSearching(false);
     },
-    [closeMarkerPopup],
+    [closeMarkerPopup, cancelReverseLookup],
   );
 
   const handleSelectSaved = (location: SavedLocation) => {
@@ -469,6 +522,11 @@ export default function App() {
       reopenPopupRef.current = false;
     }
   }, [center]);
+  useEffect(() => {
+    return () => {
+      cancelReverseLookup();
+    };
+  }, [cancelReverseLookup]);
 
   const formatPopupLabel = (label: string | null) => {
     if (!label) return null;
@@ -481,6 +539,15 @@ export default function App() {
     ? formatPopupLabel(selectedLocation.label)
     : formatPopupLabel(pinLabelOverride) ?? t.mapPopupTitle;
   const centerPinColor = selectedLocationColor ?? CLICKED_CIRCLE_COLOR;
+  const searchStatusText = isReverseGeocoding
+    ? t.reverseLookupStatus
+    : reverseGeocodeError
+      ? reverseGeocodeError
+      : isSearching
+        ? t.searchStatusSearching
+        : results.length
+          ? t.formatResultsCount(results.length)
+          : "";
 
   return (
     <>
@@ -547,6 +614,8 @@ export default function App() {
                   <input
                     value={search}
                     onChange={(e) => {
+                      cancelReverseLookup();
+                      setReverseGeocodeError(null);
                       setSearch(e.target.value);
                       setIsSearchLocked(false);
                     }}
@@ -557,11 +626,7 @@ export default function App() {
                     className="h-10 w-full rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900/50 text-slate-900 dark:text-slate-100 px-3 pr-10 focus:outline-none focus:ring-2 focus:ring-sky-400"
                   />
                   <div className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-slate-500 dark:text-slate-300">
-                    {isSearching
-                      ? t.searchStatusSearching
-                      : results.length
-                        ? t.formatResultsCount(results.length)
-                        : ""}
+                    {searchStatusText}
                   </div>
                   {results.length > 0 && (
                     <div className="absolute z-[1100] mt-1 w-full rounded-xl border border-slate-200 bg-white shadow dark:border-slate-700 dark:bg-slate-800">
