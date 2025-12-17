@@ -54,9 +54,7 @@ type Translation = {
   searchStatusSearching: string;
   formatResultsCount: (count: number) => string;
   currentLocationTitle: string;
-  radiusTerm: string;
   centerCoordinatesTerm: string;
-  mapClickHint: string;
   saveCurrentButton: string;
   alreadySavedButton: string;
   savedLocationsTitle: string;
@@ -112,9 +110,7 @@ const translations: Record<Language, Translation> = {
     searchStatusSearching: "Searching...",
     formatResultsCount: (count: number) => `${count} results`,
     currentLocationTitle: "Current Location",
-    radiusTerm: "Radius",
     centerCoordinatesTerm: "Center coordinates",
-    mapClickHint: "Click the map to change the center point.",
     saveCurrentButton: "Save this location",
     alreadySavedButton: "Location saved",
     savedLocationsTitle: "Saved Locations",
@@ -151,9 +147,7 @@ const translations: Record<Language, Translation> = {
     searchStatusSearching: "検索中…",
     formatResultsCount: (count: number) => `${count}件`,
     currentLocationTitle: "現在の地点",
-    radiusTerm: "半径",
     centerCoordinatesTerm: "中心座標",
-    mapClickHint: "地図をクリックして中心点を変更できます。",
     saveCurrentButton: "この地点を保存",
     alreadySavedButton: "保存済みの地点",
     savedLocationsTitle: "保存した地点",
@@ -646,17 +640,12 @@ export default function App() {
               <div className="font-semibold text-slate-900 dark:text-slate-100 mb-2">{t.currentLocationTitle}</div>
               <dl className="text-xs space-y-2">
                 <div>
-                  <dt className="text-slate-500 dark:text-slate-300">{t.radiusTerm}</dt>
-                  <dd className="font-mono text-base">{metersToReadable(radiusMeters)}</dd>
-                </div>
-                <div>
                   <dt className="text-slate-500 dark:text-slate-300">{t.centerCoordinatesTerm}</dt>
                   <dd className="font-mono text-base">
                     {center.lat.toFixed(5)}, {center.lng.toFixed(5)}
                   </dd>
                 </div>
               </dl>
-              <p className="text-xs text-slate-500 dark:text-slate-400 mt-3">{t.mapClickHint}</p>
               <button
                 onClick={handleSaveLocation}
                 disabled={isCurrentLocationSaved}
