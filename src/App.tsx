@@ -1001,7 +1001,7 @@ export default function App() {
                   />
                 )}
                 {savedLocations.map((location) => {
-                  if (!location.visible || location.id === selectedLocationId) return null;
+                  if (!location.visible) return null;
                   const color = location.color || DEFAULT_CIRCLE_COLOR;
                   return (
                     <React.Fragment key={`saved-location-${location.id}`}>
