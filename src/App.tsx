@@ -242,11 +242,22 @@ export default function App() {
   const [language, setLanguage] = useState<Language>("ja");
   const [isSearchLocked, setIsSearchLocked] = useState(false);
   const uploadInputRef = useRef<HTMLInputElement | null>(null);
+  const markerRef = useRef<L.Marker | null>(null);
+  const reopenPopupRef = useRef(false);
   const [radiusWarning, setRadiusWarning] = useState<string | null>(null);
   const debSearch = useDebounced(search, 400);
   const t = translations[language];
   const languageOptions: Language[] = ["en", "ja"];
   const radiusPattern = /^\d*(\.\d*)?$/;
+  const closeMarkerPopup = (reopenAfterCenterChange = false) => {
+    const marker = markerRef.current;
+    if (!marker) return;
+    const wasOpen = marker.isPopupOpen();
+    marker.closePopup();
+    if (reopenAfterCenterChange && wasOpen) {
+      reopenPopupRef.current = true;
+    }
+  };
 
   const radiusMeters = useMemo(() => {
     const r = Number(radiusInput);
@@ -296,6 +307,7 @@ export default function App() {
     const map = useMap();
     useEffect(() => {
       function onClick(e: any) {
+        closeMarkerPopup();
         setCenter({ lat: e.latlng.lat, lng: e.latlng.lng });
       }
       map.on("click", onClick);
@@ -307,6 +319,7 @@ export default function App() {
   }
 
   const handleSelectPlace = (g: GeocodeResult) => {
+    closeMarkerPopup(true);
     setCenter({ lat: parseFloat(g.lat), lng: parseFloat(g.lon) });
     setSearch(g.display_name);
     setIsSearchLocked(true);
@@ -420,6 +433,7 @@ export default function App() {
       }
       setSavedLocations(normalized);
       setSelectedLocationId(normalized[0].id);
+      closeMarkerPopup(true);
       setCenter({ lat: normalized[0].lat, lng: normalized[0].lng });
     } catch (err) {
       if (typeof window !== "undefined" && window.alert) {
@@ -429,6 +443,7 @@ export default function App() {
   };
 
   const handleSelectSaved = (location: SavedLocation) => {
+    closeMarkerPopup(true);
     setCenter({ lat: location.lat, lng: location.lng });
     setSearch(location.label);
     setIsSearchLocked(true);
@@ -479,6 +494,13 @@ export default function App() {
   const selectedLocation = selectedLocationId
     ? savedLocations.find((loc) => loc.id === selectedLocationId)
     : null;
+
+  useEffect(() => {
+    if (reopenPopupRef.current && markerRef.current) {
+      markerRef.current.openPopup();
+      reopenPopupRef.current = false;
+    }
+  }, [center]);
 
   return (
     <>
@@ -797,7 +819,7 @@ export default function App() {
             <InvalidateSizeOnResize />
             <RecenterOn center={center} />
             <ClickSetter />
-            <Marker position={[center.lat, center.lng]}>
+            <Marker position={[center.lat, center.lng]} ref={markerRef}>
               <Popup>
                 {selectedLocation ? selectedLocation.label : t.mapPopupTitle}
                 <br />
