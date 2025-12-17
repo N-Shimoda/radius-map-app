@@ -309,6 +309,7 @@ export default function App() {
       function onClick(e: any) {
         closeMarkerPopup();
         setCenter({ lat: e.latlng.lat, lng: e.latlng.lng });
+        setSelectedLocationId(null);
       }
       map.on("click", onClick);
       return () => {
