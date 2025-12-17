@@ -239,6 +239,7 @@ export default function App() {
   const [isSearching, setIsSearching] = useState(false);
   const [savedLocations, setSavedLocations] = useState<SavedLocation[]>([]);
   const [selectedLocationId, setSelectedLocationId] = useState<string | null>(null);
+  const [pinLabelOverride, setPinLabelOverride] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingLabel, setEditingLabel] = useState("");
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
@@ -313,6 +314,7 @@ export default function App() {
         closeMarkerPopup();
         setCenter({ lat: e.latlng.lat, lng: e.latlng.lng });
         setSelectedLocationId(null);
+        setPinLabelOverride(null);
       }
       map.on("click", onClick);
       return () => {
@@ -327,6 +329,8 @@ export default function App() {
     setCenter({ lat: parseFloat(g.lat), lng: parseFloat(g.lon) });
     setSearch(g.display_name);
     setIsSearchLocked(true);
+    setSelectedLocationId(null);
+    setPinLabelOverride(g.display_name);
     setResults([]);
   };
 
@@ -437,6 +441,7 @@ export default function App() {
       }
       setSavedLocations(normalized);
       setSelectedLocationId(normalized[0].id);
+      setPinLabelOverride(null);
       closeMarkerPopup(true);
       setCenter({ lat: normalized[0].lat, lng: normalized[0].lng });
     } catch (err) {
@@ -452,6 +457,7 @@ export default function App() {
     setSearch(location.label);
     setIsSearchLocked(true);
     setSelectedLocationId(location.id);
+    setPinLabelOverride(null);
     setResults([]);
     setIsSearching(false);
   };
@@ -505,6 +511,17 @@ export default function App() {
       reopenPopupRef.current = false;
     }
   }, [center]);
+
+  const formatPopupLabel = (label: string | null) => {
+    if (!label) return null;
+    const [head] = label.split(",");
+    const trimmed = head.trim();
+    return trimmed || label;
+  };
+
+  const popupLabel = selectedLocation
+    ? formatPopupLabel(selectedLocation.label)
+    : formatPopupLabel(pinLabelOverride) ?? t.mapPopupTitle;
 
   return (
     <>
@@ -823,7 +840,7 @@ export default function App() {
             <ClickSetter />
             <Marker position={[center.lat, center.lng]} ref={markerRef}>
               <Popup>
-                {selectedLocation ? selectedLocation.label : t.mapPopupTitle}
+                {popupLabel}
                 <br />
                 {center.lat.toFixed(6)}, {center.lng.toFixed(6)}
               </Popup>
