@@ -21,7 +21,7 @@ type GeocodeResult = {
   lon: string;
   type?: string;
 };
-type SavedLocation = LatLng & { id: string; label: string };
+type SavedLocation = LatLng & { id: string; label: string; visible: boolean; color: string };
 type Language = "en" | "ja";
 
 // Interface for uploaded JSON location items
@@ -30,6 +30,8 @@ interface UploadedLocationItem {
   label?: string | number | null;
   lat: string | number;
   lng: string | number;
+  visible?: boolean;
+  color?: string | null;
 }
 
 // Type guard to validate uploaded location data
@@ -76,6 +78,9 @@ type Translation = {
   formatDefaultSavedLabel: (lat: number, lng: number) => string;
   languageButtonLabel: string;
   downloadTooltip: string;
+  showCircleButton: string;
+  hideCircleButton: string;
+  circleColorLabel: string;
 };
 
 const languageDisplayNames: Record<Language, string> = {
@@ -138,6 +143,9 @@ const translations: Record<Language, Translation> = {
     formatDefaultSavedLabel: (lat: number, lng: number) => `地点 ${lat.toFixed(4)}, ${lng.toFixed(4)}`,
     languageButtonLabel: "表示言語",
     downloadTooltip: "保存した地点をダウンロード",
+    showCircleButton: "円を表示",
+    hideCircleButton: "円を非表示",
+    circleColorLabel: "円の色",
   },
   en: {
     headerTitle: "Radius Visualization Map",
@@ -177,8 +185,18 @@ const translations: Record<Language, Translation> = {
     formatDefaultSavedLabel: (lat: number, lng: number) => `Point ${lat.toFixed(4)}, ${lng.toFixed(4)}`,
     languageButtonLabel: "Language",
     downloadTooltip: "Download saved locations.",
+    showCircleButton: "Show circle",
+    hideCircleButton: "Hide circle",
+    circleColorLabel: "Circle color",
   },
 };
+
+const DEFAULT_CIRCLE_COLOR = "#2563eb";
+
+const randomCircleColor = () =>
+  `#${Math.floor(Math.random() * 0xffffff)
+    .toString(16)
+    .padStart(6, "0")}`;
 
 const DEFAULT_CENTER: LatLng = { lat: 35.681236, lng: 139.767125 }; // Tokyo Station
 const SAVED_LOCATIONS_KEY = "radius-map-app:saved-locations";
@@ -354,6 +372,11 @@ export default function App() {
                 label: typeof item.label === "string" ? item.label : "",
                 lat: Number(item.lat),
                 lng: Number(item.lng),
+                visible: typeof item.visible === "boolean" ? item.visible : true,
+                color:
+                  typeof item.color === "string" && item.color.trim()
+                    ? item.color
+                    : randomCircleColor(),
               }))
               .filter((item) => Number.isFinite(item.lat) && Number.isFinite(item.lng)),
           );
@@ -373,7 +396,14 @@ export default function App() {
     const label = search.trim() || t.formatDefaultSavedLabel(center.lat, center.lng);
     setSavedLocations((prev) => [
       ...prev,
-      { id: generateId(), label, lat: center.lat, lng: center.lng },
+      {
+        id: generateId(),
+        label,
+        lat: center.lat,
+        lng: center.lng,
+        visible: true,
+        color: randomCircleColor(),
+      },
     ]);
   };
 
@@ -389,7 +419,14 @@ export default function App() {
   const handleDownloadLocations = () => {
     if (savedLocations.length === 0 || typeof window === "undefined") return;
     const payload = JSON.stringify(
-      savedLocations.map(({ id, label, lat, lng }) => ({ id, label, lat, lng })),
+      savedLocations.map(({ id, label, lat, lng, visible, color }) => ({
+        id,
+        label,
+        lat,
+        lng,
+        visible,
+        color,
+      })),
       null,
       2,
     );
@@ -430,7 +467,13 @@ export default function App() {
           const rawLabel = typeof item.label === "string" ? item.label : "";
           const label = rawLabel.trim() || t.formatDefaultSavedLabel(lat, lng);
           const id = typeof item.id === "string" ? item.id : generateId();
-          return { id, label, lat, lng };
+          const visible =
+            typeof item.visible === "boolean" ? item.visible : true;
+          const color =
+            typeof item.color === "string" && item.color.trim()
+              ? item.color
+              : randomCircleColor();
+          return { id, label, lat, lng, visible, color };
         })
         .filter((entry): entry is SavedLocation => Boolean(entry));
       if (normalized.length === 0) {
@@ -481,6 +524,12 @@ export default function App() {
     }
   };
 
+  const handleToggleLocationVisibility = (id: string) => {
+    setSavedLocations((prev) =>
+      prev.map((loc) => (loc.id === id ? { ...loc, visible: !loc.visible } : loc)),
+    );
+  };
+
   const handleCancelEditing = () => {
     setEditingId(null);
     setEditingLabel("");
@@ -504,6 +553,7 @@ export default function App() {
   const selectedLocation = selectedLocationId
     ? savedLocations.find((loc) => loc.id === selectedLocationId)
     : null;
+  const selectedLocationColor = selectedLocation?.color ?? null;
 
   useEffect(() => {
     if (reopenPopupRef.current && markerRef.current) {
@@ -717,6 +767,34 @@ export default function App() {
                 <ul className="space-y-2 max-h-80 overflow-auto pr-1">
                   {savedLocations.map((location) => {
                     const isEditing = editingId === location.id;
+                    const isSelected = selectedLocationId === location.id;
+                    const locationColor = location.color;
+                    const renderColorLegend = () => (
+                      <div className="flex items-center gap-2 text-[11px] text-slate-500 dark:text-slate-400">
+                        <span
+                          className="inline-flex h-3 w-3 rounded-full border border-white shadow"
+                          style={{ backgroundColor: locationColor }}
+                          aria-hidden="true"
+                        />
+                        <span>{t.circleColorLabel}</span>
+                      </div>
+                    );
+                    const renderVisibilityButton = (stopPropagation = false) => (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          if (stopPropagation) e.stopPropagation();
+                          handleToggleLocationVisibility(location.id);
+                        }}
+                        className={`rounded-full border px-2 py-1 text-[11px] font-semibold transition ${
+                          location.visible
+                            ? "border-sky-200 text-sky-700 hover:border-sky-400 dark:border-sky-500 dark:text-sky-300"
+                            : "border-slate-200 text-slate-500 hover:border-slate-400 dark:border-slate-600 dark:text-slate-300"
+                        }`}
+                      >
+                        {location.visible ? t.hideCircleButton : t.showCircleButton}
+                      </button>
+                    );
                     return (
                       <li key={location.id} className="text-xs">
                         {isEditing ? (
@@ -749,6 +827,10 @@ export default function App() {
                                 {t.cancelButton}
                               </button>
                             </div>
+                            <div className="mt-3 flex items-center justify-between">
+                              {renderColorLegend()}
+                              {renderVisibilityButton()}
+                            </div>
                           </div>
                         ) : (
                           <div
@@ -771,7 +853,11 @@ export default function App() {
                             <div className="font-mono text-slate-500 dark:text-slate-300">
                               {location.lat.toFixed(4)}, {location.lng.toFixed(4)}
                             </div>
-                            {selectedLocationId === location.id && (
+                            <div className="mt-2 flex items-center justify-between">
+                              {renderColorLegend()}
+                              {renderVisibilityButton(true)}
+                            </div>
+                            {isSelected && (
                               <div className="mt-2 flex gap-2">
                                 <button
                                   type="button"
@@ -846,7 +932,34 @@ export default function App() {
               </Popup>
             </Marker>
             {radiusMeters > 0 && (
-              <Circle center={[center.lat, center.lng]} radius={radiusMeters} pathOptions={{ fillOpacity: 0.1 }} />
+              <>
+                <Circle
+                  center={[center.lat, center.lng]}
+                  radius={radiusMeters}
+                  pathOptions={{
+                    color: selectedLocationColor ?? DEFAULT_CIRCLE_COLOR,
+                    fillColor: selectedLocationColor ?? DEFAULT_CIRCLE_COLOR,
+                    fillOpacity: 0.1,
+                  }}
+                />
+                {savedLocations.map((location) => {
+                  if (!location.visible || location.id === selectedLocationId) return null;
+                  const color = location.color;
+                  return (
+                    <Circle
+                      key={`saved-circle-${location.id}`}
+                      center={[location.lat, location.lng]}
+                      radius={radiusMeters}
+                      pathOptions={{
+                        color,
+                        fillColor: color,
+                        fillOpacity: 0.08,
+                        weight: 1.5,
+                      }}
+                    />
+                  );
+                })}
+              </>
             )}
           </MapContainer>
         </div>
