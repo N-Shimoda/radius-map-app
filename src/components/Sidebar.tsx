@@ -1,5 +1,5 @@
 import type { ChangeEventHandler, RefObject } from "react";
-import { IoCloudUploadOutline } from "react-icons/io5";
+import { IoCloudUploadOutline, IoTrashOutline } from "react-icons/io5";
 import { AiOutlineDownload, AiOutlineEye, AiOutlineEyeInvisible } from "react-icons/ai";
 import { type Language, type Translation } from "../i18n";
 import { DEFAULT_CIRCLE_COLOR } from "../constants/mapColors";
@@ -383,22 +383,7 @@ export function Sidebar({
                               }}
                               className="flex-1 flex items-center justify-center gap-1 rounded border border-rose-200 px-3 py-1.5 text-xs font-semibold text-rose-600 hover:border-rose-400 hover:text-rose-700"
                             >
-                              <svg
-                                className="h-4 w-4"
-                                viewBox="0 0 24 24"
-                                fill="none"
-                                stroke="currentColor"
-                                strokeWidth="2"
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                aria-hidden="true"
-                              >
-                                <polyline points="3 6 5 6 21 6" />
-                                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6" />
-                                <path d="M10 11v6" />
-                                <path d="M14 11v6" />
-                                <path d="M15 6V4a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v2" />
-                              </svg>
+                              <IoTrashOutline className="h-4 w-4" aria-hidden="true" />
                             </button>
                           </div>
                         )}
