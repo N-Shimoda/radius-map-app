@@ -33,13 +33,13 @@ export function LocationSummary({
           <div className={`font-medium ${labelColorClass}`}>{label}</div>
           {fullAddress ? (
             <div
-              className="text-xs text-slate-600 dark:text-slate-300 line-clamp-2"
+              className="mt-1 text-xs text-slate-600 dark:text-slate-300 line-clamp-2"
               title={fullAddress}
             >
               {fullAddress}
             </div>
           ) : null}
-          <div className="font-mono text-xs text-slate-500 dark:text-slate-300">
+          <div className="mt-1 font-mono text-xs text-slate-500 dark:text-slate-300">
             {lat.toFixed(6)}, {lng.toFixed(6)}
           </div>
         </div>
