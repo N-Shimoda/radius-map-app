@@ -111,7 +111,7 @@ export function Sidebar({
               {searchStatusText}
             </div>
             {results.length > 0 && (
-              <div className="absolute z-[1100] mt-1 w-full rounded-xl border border-slate-200 bg-white shadow dark:border-slate-700 dark:bg-slate-800">
+              <div className="absolute z-[1100] mt-1 w-full rounded-xl border border-slate-200 bg-white/90 shadow dark:border-slate-700 dark:bg-slate-800/90">
                 {results.map((g, i) => (
                   <button
                     key={`${g.display_name}-${i}`}
