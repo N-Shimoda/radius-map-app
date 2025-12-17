@@ -2,6 +2,9 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { MapContainer, TileLayer, Marker, Popup, Circle, useMap } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
+import { IoCloudUploadOutline } from "react-icons/io5";
+import { AiOutlineDownload } from "react-icons/ai";
+import { HiOutlineMenu } from "react-icons/hi";
 
 // --- Fix Leaflet's default marker icons in bundlers ---
 delete (L.Icon.Default as any).prototype._getIconUrl;
@@ -511,20 +514,7 @@ export default function App() {
               aria-pressed={isSidebarOpen}
               aria-label={isSidebarOpen ? t.toggleSidebarHide : t.toggleSidebarShow}
             >
-              <svg
-                className="h-5 w-5"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                aria-hidden="true"
-              >
-                <line x1="4" y1="6" x2="20" y2="6" />
-                <line x1="4" y1="12" x2="20" y2="12" />
-                <line x1="4" y1="18" x2="20" y2="18" />
-              </svg>
+              <HiOutlineMenu className="h-5 w-5" aria-hidden="true" />
             </button>
             <div>
               <h1 className="text-2xl font-semibold">{t.headerTitle}</h1>
@@ -660,18 +650,20 @@ export default function App() {
                 <div className="flex items-center gap-2">
                   <button
                     type="button"
-                    onClick={handleDownloadLocations}
-                    disabled={savedLocations.length === 0}
-                    className="text-xs font-semibold px-3 py-1.5 rounded border border-slate-200 text-slate-600 hover:border-sky-400 hover:text-sky-700 disabled:text-slate-400 disabled:border-slate-200 dark:border-slate-600 dark:text-slate-200 dark:hover:border-sky-500 dark:hover:text-sky-300 dark:disabled:text-slate-500"
+                    onClick={handleTriggerUpload}
+                    aria-label={t.uploadLocationsButton}
+                    className="flex h-9 w-9 items-center justify-center rounded border border-slate-200 text-slate-600 hover:border-sky-400 hover:text-sky-700 dark:border-slate-600 dark:text-slate-200 dark:hover:border-sky-500 dark:hover:text-sky-300"
                   >
-                    {t.downloadLocationsButton}
+                    <IoCloudUploadOutline className="h-5 w-5" aria-hidden="true" />
                   </button>
                   <button
                     type="button"
-                    onClick={handleTriggerUpload}
-                    className="text-xs font-semibold px-3 py-1.5 rounded border border-slate-200 text-slate-600 hover:border-sky-400 hover:text-sky-700 dark:border-slate-600 dark:text-slate-200 dark:hover:border-sky-500 dark:hover:text-sky-300"
+                    onClick={handleDownloadLocations}
+                    disabled={savedLocations.length === 0}
+                    aria-label={t.downloadLocationsButton}
+                    className="flex h-9 w-9 items-center justify-center rounded border border-slate-200 text-slate-600 hover:border-sky-400 hover:text-sky-700 disabled:text-slate-400 disabled:border-slate-200 dark:border-slate-600 dark:text-slate-200 dark:hover:border-sky-500 dark:hover:text-sky-300 dark:disabled:text-slate-500"
                   >
-                    {t.uploadLocationsButton}
+                    <AiOutlineDownload className="h-5 w-5" aria-hidden="true" />
                   </button>
                   <input
                     ref={uploadInputRef}
