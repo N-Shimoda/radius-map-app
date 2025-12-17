@@ -198,12 +198,22 @@ function InvalidateSizeOnResize() {
   useEffect(() => {
     const invalidate = () => map.invalidateSize();
     map.whenReady(() => {
-      // Recalculate right after the initial layout settles
       requestAnimationFrame(invalidate);
       setTimeout(invalidate, 0);
     });
     window.addEventListener("resize", invalidate);
-    return () => window.removeEventListener("resize", invalidate);
+
+    const container = map.getContainer();
+    const observer =
+      typeof ResizeObserver !== "undefined"
+        ? new ResizeObserver(() => requestAnimationFrame(invalidate))
+        : null;
+    observer?.observe(container);
+
+    return () => {
+      window.removeEventListener("resize", invalidate);
+      observer?.disconnect();
+    };
   }, [map]);
   return null;
 }
