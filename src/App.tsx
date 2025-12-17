@@ -367,12 +367,24 @@ export default function App() {
   };
 
   const focusSavedLocation = useCallback(
-    (location: SavedLocation, options?: { keepPopupOpen?: boolean }) => {
+    (
+      location: SavedLocation,
+      options?: { keepPopupOpen?: boolean; inheritPopupState?: boolean },
+    ) => {
       const keepPopupOpen = options?.keepPopupOpen ?? false;
-      closeMarkerPopup(keepPopupOpen ? false : true);
+      const inheritPopupState = options?.inheritPopupState ?? true;
+      const isCenterPopupOpen = markerRef.current?.isPopupOpen() ?? false;
+      const shouldCarryPopup =
+        inheritPopupState && (isPopupOpenRef.current || isCenterPopupOpen);
+
       if (!keepPopupOpen) {
+        reopenPopupRef.current = shouldCarryPopup;
+        closeMarkerPopup(false);
         mapRef.current?.closePopup();
+      } else {
+        reopenPopupRef.current = false;
       }
+
       setCenter({ lat: location.lat, lng: location.lng });
       mapRef.current?.setView([location.lat, location.lng]);
       setSearch(location.label);
