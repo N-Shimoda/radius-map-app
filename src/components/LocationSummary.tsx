@@ -44,7 +44,7 @@ export function LocationSummary({
           </div>
         </div>
         <span
-          className="inline-flex h-4 w-4 rounded-full border border-slate-200 dark:border-slate-700"
+          className="inline-flex h-4 w-4 shrink-0 rounded-full border border-slate-200 dark:border-slate-700"
           style={{ backgroundColor: color }}
           role="img"
           aria-label={colorLabel}

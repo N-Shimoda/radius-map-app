@@ -260,7 +260,7 @@ export function Sidebar({
                 const locationColor = location.color || DEFAULT_CIRCLE_COLOR;
                 const colorBadge = (
                   <span
-                    className="inline-flex h-4 w-4 rounded-full border border-slate-200 dark:border-slate-700"
+                    className="inline-flex h-4 w-4 shrink-0 rounded-full border border-slate-200 dark:border-slate-700"
                     style={{ backgroundColor: locationColor }}
                     aria-hidden="true"
                   />
