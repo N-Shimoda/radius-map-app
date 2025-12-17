@@ -198,26 +198,6 @@ const randomCircleColor = () =>
     .toString(16)
     .padStart(6, "0")}`;
 
-const colorWithAlpha = (color: string, alpha: number) => {
-  const trimmed = color?.trim();
-  if (!trimmed) return color;
-  const match = trimmed.match(/^#([0-9a-f]{3}|[0-9a-f]{6})$/i);
-  if (!match) return color;
-  let hex = match[1];
-  if (hex.length === 3) {
-    hex = hex
-      .split("")
-      .map((char) => char + char)
-      .join("");
-  }
-  const value = parseInt(hex, 16);
-  const r = (value >> 16) & 255;
-  const g = (value >> 8) & 255;
-  const b = value & 255;
-  const safeAlpha = Math.min(1, Math.max(0, alpha));
-  return `rgba(${r}, ${g}, ${b}, ${safeAlpha})`;
-};
-
 const DEFAULT_CENTER: LatLng = { lat: 35.681236, lng: 139.767125 }; // Tokyo Station
 const SAVED_LOCATIONS_KEY = "radius-map-app:saved-locations";
 const generateId = () =>
@@ -786,8 +766,13 @@ export default function App() {
                       const isEditing = editingId === location.id;
                       const isSelected = selectedLocationId === location.id;
                       const locationColor = location.color || DEFAULT_CIRCLE_COLOR;
-                      const itemBackground = colorWithAlpha(locationColor, isSelected ? 0.28 : 0.12);
-                      const editingBackground = colorWithAlpha(locationColor, 0.22);
+                      const colorBadge = (
+                        <span
+                          className="inline-flex h-4 w-4 rounded-full border border-slate-200 dark:border-slate-700"
+                          style={{ backgroundColor: locationColor }}
+                          aria-hidden="true"
+                        />
+                      );
                       const renderVisibilityButton = (stopPropagation = false) => (
                         <button
                           type="button"
@@ -808,13 +793,12 @@ export default function App() {
                         <li key={location.id} className="text-xs">
                           {isEditing ? (
                             <div
-                              className="border rounded-lg px-3 py-2"
-                              style={{
-                                backgroundColor: editingBackground,
-                                borderColor: locationColor,
-                              }}
+                              className="border rounded-lg px-3 py-2 bg-white/70 dark:bg-slate-900/40 border-slate-200 dark:border-slate-600"
                             >
-                              <label className="block text-[10px] text-slate-500 dark:text-slate-400 mb-1">{t.editLabelHeading}</label>
+                              <div className="flex items-center justify-between mb-1">
+                                <label className="block text-[10px] text-slate-500 dark:text-slate-400">{t.editLabelHeading}</label>
+                                {colorBadge}
+                              </div>
                               <input
                                 value={editingLabel}
                                 onChange={(e) => setEditingLabel(e.target.value)}
@@ -847,7 +831,7 @@ export default function App() {
                               </div>
                             </div>
                           ) : (
-                            <div
+                              <div
                               role="button"
                               tabIndex={0}
                               onClick={() => handleSelectSaved(location)}
@@ -859,17 +843,18 @@ export default function App() {
                               }}
                               className={`w-full border rounded-lg px-3 py-2 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 ${
                                 isSelected
-                                  ? "shadow-inner"
-                                  : "border-slate-200 hover:border-sky-400 dark:border-slate-600 dark:hover:border-sky-500"
+                                  ? "shadow-inner ring-1 ring-sky-300 dark:ring-sky-500 bg-white/70 dark:bg-slate-900/40 border-slate-300 dark:border-slate-600"
+                                  : "border-slate-200 hover:border-sky-400 dark:border-slate-600 dark:hover:border-sky-500 bg-white/60 dark:bg-slate-900/30"
                               }`}
-                              style={{
-                                backgroundColor: itemBackground,
-                                borderColor: isSelected ? locationColor : undefined,
-                              }}
                             >
-                              <div className="font-medium">{location.label}</div>
-                              <div className="font-mono text-slate-500 dark:text-slate-300">
-                                {location.lat.toFixed(4)}, {location.lng.toFixed(4)}
+                              <div className="flex items-start justify-between gap-2">
+                                <div>
+                                  <div className="font-medium">{location.label}</div>
+                                  <div className="font-mono text-slate-500 dark:text-slate-300">
+                                    {location.lat.toFixed(4)}, {location.lng.toFixed(4)}
+                                  </div>
+                                </div>
+                                <div className="pt-0.5">{colorBadge}</div>
                               </div>
                               <div className="mt-2 flex justify-end">
                                 {renderVisibilityButton(true)}
