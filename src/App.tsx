@@ -476,6 +476,10 @@ export default function App() {
     (loc) => Math.abs(loc.lat - center.lat) < 1e-6 && Math.abs(loc.lng - center.lng) < 1e-6,
   );
 
+  const selectedLocation = selectedLocationId
+    ? savedLocations.find((loc) => loc.id === selectedLocationId)
+    : null;
+
   return (
     <>
       {/* Ensure full-height layout for header + main, footer sits outside */}
@@ -795,7 +799,7 @@ export default function App() {
             <ClickSetter />
             <Marker position={[center.lat, center.lng]}>
               <Popup>
-                {t.mapPopupTitle}
+                {selectedLocation ? selectedLocation.label : t.mapPopupTitle}
                 <br />
                 {center.lat.toFixed(6)}, {center.lng.toFixed(6)}
               </Popup>
