@@ -140,7 +140,7 @@ const translations: Record<Language, Translation> = {
       </>
     ),
     confirmDelete: "この地点を削除しますか？",
-    formatDefaultSavedLabel: (lat: number, lng: number) => `地点 ${lat.toFixed(4)}, ${lng.toFixed(4)}`,
+    formatDefaultSavedLabel: (lat: number, lng: number) => `地点 ${lat.toFixed(2)}, ${lng.toFixed(2)}`,
     languageButtonLabel: "表示言語",
     downloadTooltip: "保存した地点をダウンロード",
     showCircleButton: "円を表示",
@@ -182,7 +182,7 @@ const translations: Record<Language, Translation> = {
       </>
     ),
     confirmDelete: "Delete this location?",
-    formatDefaultSavedLabel: (lat: number, lng: number) => `Point ${lat.toFixed(4)}, ${lng.toFixed(4)}`,
+    formatDefaultSavedLabel: (lat: number, lng: number) => `Point ${lat.toFixed(2)}, ${lng.toFixed(2)}`,
     languageButtonLabel: "Language",
     downloadTooltip: "Download saved locations.",
     showCircleButton: "Show circle",
@@ -740,7 +740,7 @@ export default function App() {
                   />
                 </div>
                 <div className="font-mono text-base">
-                  {center.lat.toFixed(5)}, {center.lng.toFixed(5)}
+                  {center.lat.toFixed(2)}, {center.lng.toFixed(2)}
                 </div>
                 <div className="flex justify-end">
                   <button
@@ -903,7 +903,7 @@ export default function App() {
                                 <div>
                                   <div className="font-medium">{location.label}</div>
                                   <div className="font-mono text-slate-500 dark:text-slate-300">
-                                    {location.lat.toFixed(4)}, {location.lng.toFixed(4)}
+                                    {location.lat.toFixed(2)}, {location.lng.toFixed(2)}
                                   </div>
                                 </div>
                                 <div className="pt-0.5">{colorBadge}</div>
@@ -984,7 +984,7 @@ export default function App() {
               <Popup>
                 {popupLabel}
                 <br />
-                {center.lat.toFixed(6)}, {center.lng.toFixed(6)}
+                {center.lat.toFixed(2)}, {center.lng.toFixed(2)}
               </Popup>
             </Marker>
             {radiusMeters > 0 && (
@@ -1019,7 +1019,7 @@ export default function App() {
                         <Popup>
                           {location.label ?? `Saved location ${location.id}`}
                           <br />
-                          {location.lat.toFixed(6)}, {location.lng.toFixed(6)}
+                          {location.lat.toFixed(2)}, {location.lng.toFixed(2)}
                         </Popup>
                       </Marker>
                     </React.Fragment>
